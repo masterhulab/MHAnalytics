@@ -1,0 +1,30 @@
+{
+  "name": "mhanalytics",
+  "version": "0.1.0",
+  "description": "A lightweight, privacy-friendly website analytics tool built on Cloudflare Workers and D1 Database.",
+  "main": "src/index.ts",
+  "scripts": {
+    "dev": "wrangler pages dev .",
+    "deploy": "wrangler pages deploy .",
+    "cf-typegen": "wrangler types --env-interface CloudflareBindings",
+    "lint": "tsc --noEmit",
+    "test": "echo \"Error: no test specified\" && exit 1"
+  },
+  "keywords": [
+    "analytics",
+    "cloudflare-workers",
+    "d1",
+    "serverless",
+    "privacy"
+  ],
+  "author": "masterhulab (https://github.com/masterhulab)",
+  "license": "MIT",
+  "type": "commonjs",
+  "dependencies": {
+    "@cloudflare/workers-types": "^4.20260123.0",
+    "@iconify-json/logos": "^1.2.10",
+    "hono": "^4.11.5",
+    "typescript": "^5.9.3",
+    "wrangler": "^4.60.0"
+  }
+}

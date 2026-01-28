@@ -1,0 +1,18 @@
+name = "mhanalytics"
+compatibility_date = "2026-01-28"
+
+# D1 Database Binding
+# Replace 'database_id' with your actual D1 Database ID from Cloudflare Dashboard
+[[d1_databases]]
+binding = "DB"
+database_name = "analytics-db"
+database_id = "xxxxxxxx-xxxx-xxxx-xxxx-xxxxxxxxxxxx"
+
+# Environment Variables
+# Configure these in Cloudflare Dashboard or here
+[vars]
+# API_KEY = "your-secret-key"
+# ALLOWED_ORIGINS = "https://example.com,https://another.com"
+# TZ_OFFSET = "8" # Timezone offset in hours (default: 8 for CN)
+# IGNORE_IPS = "127.0.0.1, 192.168.1.1" # Comma separated IPs to ignore
+# IGNORE_PATHS = "/admin, /preview" # Comma separated path prefixes to ignore
