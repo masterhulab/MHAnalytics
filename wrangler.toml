@@ -1,0 +1,11 @@
+name = "mhanalytics"
+compatibility_date = "2026-01-28"
+
+# D1 Database Binding
+# Replace 'database_id' with your actual D1 Database ID from Cloudflare Dashboard
+[[d1_databases]]
+binding = "DB"
+database_name = "analytics-db"
+database_id = "xxxxxxxx-xxxx-xxxx-xxxx-xxxxxxxxxxxx"
+
+# Optional: KV Namespaces, R2 Buckets, etc.
