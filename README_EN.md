@@ -10,166 +10,163 @@ Designed to be deployed easily via GitHub and configured entirely through the Cl
 
 - **🚀 Serverless & Fast**: Runs on Cloudflare's global network (Pages Functions) with minimal latency.
 - **🔒 Privacy-First**: No cookies, no PII collected. Uses daily session hashing to count unique visitors without cross-day tracking.
-- **📊 Built-in Dashboard**: View real-time stats directly from your Pages URL, supporting multiple time ranges (24h, 7d, 30d).
+- **📊 Built-in Dashboard**: View real-time stats directly from your Pages URL, supporting multiple time ranges (24h, 7d, 30d, 3m, 6m, 1y, All).
+- **🎨 Modern UI & UX**: Designed with dark/light modes, glassmorphism, smooth loading animations, and intuitive empty states.
+- **🌍 I18n Support**: Built-in English/Chinese switching, automatically adapting to visitor preferences.
+- **🚩 Privacy-Friendly Icons**: Integrated `flag-icons` and `bootstrap-icons` for locally rendered icons, without external CDN dependencies.
 - **⚙️ Zero-Code Config**: Customize everything (Timezone, Allowed Origins, Ignore Lists) via standard environment variables.
 - **🛠️ Modular Architecture**: Clean code structure using TypeScript, Hono, and modular services.
 - **🆓 Free Tier Friendly**: Fits perfectly within Cloudflare's free tier limits for small to medium sites.
 
+## ⚙️ Environment Variables
+
+Configure these in the Cloudflare Dashboard under **Settings** -> **Environment variables**. No code changes required.
+
+| Variable | Description | Example / Default |
+| :--- | :--- | :--- |
+| `API_KEY` | **(Recommended)** Secret key to protect your dashboard. If unset, dashboard is public. | `my-secret-password` |
+| `ALLOWED_ORIGINS` | List of domains allowed to report data (CORS). Supports `*` wildcard. | `https://example.com,https://*.blog.com` |
+| `TZ_OFFSET` | Timezone offset (in hours) for dashboard and stats. | `8` (Default, UTC+8) |
+| `IGNORE_IPS` | List of IPs to ignore (e.g., your own IP). | `127.0.0.1, 192.168.1.1` |
+| `IGNORE_PATHS` | List of path prefixes to ignore (e.g., admin panels). | `/admin, /preview` |
+| `SITE_NAME` | Site name displayed on the dashboard. | `My Awesome Blog` |
+| `AUTHOR_NAME` | Author name displayed in the footer. | `John Doe` |
+
+> **Note**: After changing environment variables, you must **redeploy** (or click "Retry deployment") for changes to take effect.
+
+## 📦 Client Integration
+
+### 1. Basic Tracking (PV/UV)
+
+Add the following script to the `<head>` or `<body>` of your website:
+
+```html
+<script defer src="https://your-analytics-project.pages.dev/tracker.js"></script>
+```
+
+- Replace `https://your-analytics-project.pages.dev` with your actual Cloudflare Pages domain.
+- The script automatically reports a visit (PV/UV) when loaded.
+
+### Method 2: Using IDs (Legacy Support)
+
+If you have existing pages using specific IDs, the script will automatically populate them:
+
+```html
+<!-- Page Views (PV) -->
+<span id="mh_page_pv">...</span>
+
+<!-- Page Visitors (UV) -->
+<span id="mh_page_uv">...</span>
+
+<!-- Site Views (PV) -->
+<span id="mh_site_pv">...</span>
+
+<!-- Site Visitors (UV) -->
+<span id="mh_site_uv">...</span>
+```
+
+### Method 3: Data Attributes (Recommended)
+
+```html
+<!-- Display current page PV -->
+<span data-mh-stat="pv">...</span>
+
+<!-- Display current page UV -->
+<span data-mh-stat="uv">...</span>
+
+<!-- Display site-wide total PV -->
+<span data-mh-stat="site_pv">...</span>
+
+<!-- Display site-wide total UV -->
+<span data-mh-stat="site_uv">...</span>
+```
+
+The script will automatically find elements with the `data-mh-stat` attribute and populate them with data.
+
+## 🔌 API Documentation
+
+You can also use the API directly for custom integrations:
+
+### 1. Collect Data
+- **Endpoint**: `POST /api/collect` (Recommended) or `GET /api/collect`
+- **Function**: Record a visit.
+- **Params (JSON)**:
+  - `url`: Current page URL
+  - `referrer`: Referrer URL
+  - `userAgent`: User Agent string
+
+### 2. Get Counts
+- **Endpoint**: `GET /api/counts`
+- **Params**:
+  - `url`: (Required) The page URL to query
+- **Returns**:
+  ```json
+  {
+    "page": { "pv": 100, "uv": 50, "todayPv": 10, "todayUv": 5 },
+    "site": { "pv": 10000, "uv": 5000, "todayPv": 100, "todayUv": 50 }
+  }
+  ```
+
+### 3. Dashboard Stats
+- **Endpoint**: `GET /api/stats`
+- **Header**: `x-api-key: <your-api-key>` (If `API_KEY` is set)
+- **Params**:
+  - `range`: Time range (24h, 7d, 30d, 3m, 6m, 1y, all)
+  - `domain`: (Optional) Filter by domain
+- **Returns**: Detailed stats including trends, sources, browsers, OS, geography, etc.
+
 ## 💻 Local Development
 
-This project fully supports local development and testing using the Cloudflare Wrangler CLI.
+This project supports local development using Cloudflare Wrangler CLI.
 
 ### 1. Install Dependencies
 ```bash
 npm install
 ```
 
-### 2. Configure Local Database (Optional)
-By default, local development uses Wrangler's simulated SQLite database.
-You can import seed data to verify the dashboard:
+### 2. Generate Test Data (Optional)
+To preview the full dashboard functionality during development:
+
 ```bash
+# Generate seed.sql with 500+ random visits
+node scripts/generate_seed.js
+
+# Import into local D1 database
 npx wrangler d1 execute analytics-db --local --file=./seed.sql
 ```
 
-### 3. Configure Remote D1 (Optional)
-If you want your local environment to connect to the real D1 database on Cloudflare (or use a consistent UUID), modify `wrangler.toml`:
-
-```toml
-[[d1_databases]]
-binding = "DB"
-database_name = "analytics-db"
-# database_id = "your-real-d1-id" # Uncomment to connect remote or fix ID
-```
-
-*   **Note**: `database_id` links to the remote DB. If enabled during development, `wrangler d1 execute --local` uses the local file corresponding to that ID.
-
-### 4. Start Development Server
+### 3. Start Server
 ```bash
 npm run dev
 ```
-Visit `http://localhost:8788` to view your locally running analytics service.
+Visit `http://localhost:8788` to see the analytics service running locally.
 
 ## 🚀 Deployment Guide
 
 ### 1. Preparation
-
-1.  **Fork** this repository to your GitHub account.
-2.  Log in to the [Cloudflare Dashboard](https://dash.cloudflare.com/).
-3.  Go to **Workers & Pages** -> **Overview** -> **Create Application** -> **Pages** -> **Connect to Git**.
+1. **Fork** this repository.
+2. Log in to [Cloudflare Dashboard](https://dash.cloudflare.com/).
+3. Go to **Workers & Pages** -> **Create Application** -> **Pages** -> **Connect to Git**.
 
 ### 2. Create Pages Project
+1. Select repository, click **Begin setup**.
+2. **Framework preset**: `None`.
+3. **Build output directory**: `public`.
+4. Click **Save and Deploy**.
 
-1.  Select your forked `analytics` repository and click **Begin setup**.
-2.  **Project name**: Choose a name for your analytics service (e.g., `my-analytics`).
-3.  **Production branch**: `main`.
-4.  **Framework preset**: Select `None`.
-5.  **Build command**: `npm run deploy` (or leave empty, as we are mainly deploying Functions).
-6.  **Build output directory**: `public` (even if this folder doesn't exist, just don't leave it empty).
-7.  Click **Save and Deploy**.
+### 3. Bind Database (D1)
+1. Create a new D1 database (e.g., `analytics-db`) in Cloudflare dashboard.
+2. Go to Pages Project -> **Settings** -> **Functions**.
+3. Add **D1 Database Binding**: Variable name `DB`, select your database.
+4. **Important**: Redeploy for changes to take effect.
 
-### 3. Configure Database (Crucial Step)
-
-The first deployment might succeed but will fail to connect to the database. You need to manually bind the D1 database.
-
-1.  In the Cloudflare Dashboard left menu, find **D1** and create a new database (e.g., `analytics-db`).
-2.  Go back to your Pages project page.
-3.  Click **Settings** -> **Functions**.
-4.  Scroll down to find **D1 Database Bindings**.
-5.  Click **Add binding**:
-    *   **Variable name**: `DB` (Must be uppercase `DB`).
-    *   **D1 database**: Select the database you just created.
-6.  Click **Save**.
-
-### 4. Redeploy
-
-For the database binding to take effect, you need to redeploy once.
-
-1.  Go to the **Deployments** tab.
-2.  Find the latest deployment, click the three-dot menu on the right -> **Retry deployment**.
-3.  Wait for the deployment to complete.
-
-### 5. Initialize Database
-
-Visit `https://your-project-name.pages.dev/setup` (if you set an API_KEY, append `?key=YOUR_KEY`) to create the database tables.
-Seeing "Database initialized successfully" means success.
-
-## ⚙️ Configuration
-
-You can customize the behavior by setting **Environment Variables** in your Cloudflare Worker settings (Settings -> Variables). **No code edits required.**
-
-| Variable | Description | Example |
-|----------|-------------|---------|
-| `API_KEY` | Protects the `/setup` endpoint and (optionally) stats. | `s3cr3t-k3y` |
-| `ALLOWED_ORIGINS` | CORS allowed domains. Supports wildcards (`*`). | `https://blog.com, *.mysite.com` |
-| `SITE_NAME` | Custom title for the analytics dashboard. | `My Tech Blog` |
-| `AUTHOR_NAME` | Custom author name displayed in the navbar. | `Master Hu` |
-| `TZ_OFFSET` | Timezone offset in hours for "Today" stats. | `8` (UTC+8), `-5` (UTC-5) |
-| `IGNORE_IPS` | Comma-separated list of IPs to exclude from stats. | `1.2.3.4, 192.168.1.1` |
-| `IGNORE_PATHS` | Comma-separated list of URL paths to exclude. | `/admin, /preview` |
-
-## 📦 Usage
-
-### 1. Add Tracking Script
-Add this snippet to your website's `<head>` or `<body>`. Replace the URL with your Worker's URL.
-
-```html
-<script 
-  src="https://your-worker.workers.dev/lib/core.js" 
-  data-endpoint="https://your-worker.workers.dev/api/event"
-  async defer>
-</script>
+### 4. Initialize Table
+Run locally (requires login):
+```bash
+npx wrangler d1 execute analytics-db --remote --file=./schema.sql
 ```
+Or manually execute `schema.sql` content in the Cloudflare D1 console.
 
-> **Tip**: `data-endpoint` is optional. If omitted, the script automatically tries to derive the API address from `src`. However, explicit specification is recommended for stability.
+## 📄 License
 
-### 2. Display Statistics (Optional)
-If you want to display visit counts on your page footer or elsewhere, simply add `<span>` tags with specific IDs. The script will automatically fill in the data (supports SPAs like Vue/React).
-
-```html
-<!-- Today's Data -->
-Today's Views: <span id="mh_today_pv">...</span>
-Today's Visitors: <span id="mh_today_uv">...</span>
-
-<!-- Total Site Data -->
-Total Views: <span id="mh_site_pv">...</span>
-Total Visitors: <span id="mh_site_uv">...</span>
-
-<!-- Current Page Data -->
-Page Views: <span id="mh_page_pv">...</span>
-Page Visitors: <span id="mh_page_uv">...</span>
-```
-
-You don't need to add all of them; just combine as needed. The script detects existing IDs and requests only the necessary data.
-
-### 3. View Dashboard
-Simply visit your Worker's root URL: `https://your-worker.workers.dev/`
-
-## 🔒 Security & Privacy
-
-- **No Cookies**: This project does not use any persistent cookies to track users.
-- **Data Anonymization**: User identification is based on a hash of IP + UserAgent + Date. The hash salt rotates daily, meaning user behavior cannot be correlated across days.
-- **Data Ownership**: All data is stored in your own Cloudflare D1 database, which you can export or delete at any time.
-- **Access Control**: Sensitive management endpoints can be protected via `API_KEY`.
-
-## 📂 Project Structure
-
-- `src/index.ts`: Main entry point and router (Hono App).
-- `src/analytics.ts`: Core business logic, database operations, and stats aggregation (parallel query optimization).
-- `src/types.ts`: TypeScript interfaces and type definitions.
-- `src/utils.ts`: Helper functions (Bot detection, CORS, Parsing, HTML escaping).
-- `src/dashboard.ts`: HTML template for the frontend dashboard.
-- `src/tracker.ts`: Source code for the client-side tracking script.
-- `functions/[[path]].ts`: Entry adapter for Cloudflare Pages Functions.
-
-## 🤝 Contributing
-
-Issues and Pull Requests are welcome! If you find a bug or have a feature suggestion, feel free to reach out.
-
-## 🛡️ License
-
-MIT License. See [LICENSE](./LICENSE) file.
-
-## 👤 Author
-
-**masterhulab**
-- GitHub: [@masterhulab](https://github.com/masterhulab)
+MIT License

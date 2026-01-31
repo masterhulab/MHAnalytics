@@ -5,7 +5,7 @@
  * @returns true if the user agent matches a bot pattern, false otherwise.
  */
 export const isBot = (userAgent: string): boolean => {
-    const bots = /bot|spider|crawl|slurp|facebook|whatsapp|preview|curl|wget|googlebot|bingbot|yandex|baiduspider|sogou|360spider|bytespider|toutiao|sosospider|yisouspider/i;
+    const bots = /bot|spider|crawl|slurp|facebook|whatsapp|preview|curl|wget|googlebot|bingbot|yandex|baiduspider|sogou|360spider|bytespider|toutiao|sosospider|yisouspider|headlesschrome|phantomjs|archiver|php|python|perl|go-http-client/i;
     return bots.test(userAgent);
 };
 

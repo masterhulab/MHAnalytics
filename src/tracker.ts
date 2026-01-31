@@ -1,116 +1,216 @@
 export const trackerScript = `
 (function() {
   'use strict';
-  var d = document;
-  var w = window;
-  var s = d.currentScript;
-  // If data-endpoint is provided, use it. Otherwise, construct absolute URL based on script source.
-  var endpoint = '/lib/pixel.gif';
-  if (s) {
-      var attr = s.getAttribute('data-endpoint');
+
+  // --- Configuration & Utilities ---
+  var WIN = window;
+  var DOC = document;
+  var LOC = WIN.location;
+  var NAV = WIN.navigator;
+  var STORAGE_KEY = '_mh_uid';
+  var SESSION_DURATION = 30 * 60 * 1000; // 30 minutes
+
+  // 1. Privacy Check (Do Not Track)
+  // Respect user's privacy settings
+  if (NAV.doNotTrack === '1' || WIN.doNotTrack === '1') {
+      return;
+  }
+
+  // Safe LocalStorage Helper
+  // Prevents crashes if cookies are disabled or storage is full
+  var SafeStorage = {
+      get: function(key) {
+          try { return localStorage.getItem(key); } catch(e) { return null; }
+      },
+      set: function(key, val) {
+          try { localStorage.setItem(key, val); } catch(e) {}
+      }
+  };
+
+  // Determine API Endpoint
+  // Supports data-endpoint attribute or auto-detection from script src
+  var currentScript = DOC.currentScript;
+  var endpoint = '/api/collect'; // Default fallback
+  
+  if (currentScript) {
+      var attr = currentScript.getAttribute('data-endpoint');
       if (attr) {
           endpoint = attr;
-      } else if (s.src) {
+      } else if (currentScript.src) {
           try {
-              var url = new URL(s.src);
-              endpoint = url.origin + '/lib/pixel.gif';
-          } catch (e) {}
+              var url = new URL(currentScript.src);
+              endpoint = url.origin + '/api/collect';
+          } catch(e) {}
       }
   }
-  var k = '_usid';
-  
-  function g() {
-    try {
-        var v = localStorage.getItem(k);
-        var t = Date.now();
-        if (v) {
-            var p = JSON.parse(v);
-            if (t - p.t < 1800000) {
-                localStorage.setItem(k, JSON.stringify({ i: p.i, t: t }));
-                return p.i;
-            }
-        }
-        var n = Math.random().toString(36).substring(2) + t.toString(36);
-        localStorage.setItem(k, JSON.stringify({ i: n, t: t }));
-        return n;
-    } catch (e) {
-        return 'u-' + Math.random().toString(36).substring(2);
-    }
+
+  // Generate or Retrieve Session ID
+  // Uses a rotating ID based on activity to group visits into sessions
+  function getSessionId() {
+      var stored = SafeStorage.get(STORAGE_KEY);
+      var now = Date.now();
+      var id = '';
+
+      if (stored) {
+          try {
+              var parsed = JSON.parse(stored);
+              if (now - parsed.lastActive < SESSION_DURATION) {
+                  id = parsed.id;
+              }
+          } catch(e) {}
+      }
+
+      if (!id) {
+          id = Math.random().toString(36).substring(2) + now.toString(36);
+      }
+
+      SafeStorage.set(STORAGE_KEY, JSON.stringify({ id: id, lastActive: now }));
+      return id;
   }
 
-  function c() {
-    var payload = { 
-        u: w.location.href, 
-        r: d.referrer, 
-        s: g() 
-    };
-    
-    if (navigator.sendBeacon) {
-        var b = new Blob([JSON.stringify(payload)], { type: 'text/plain' });
-        navigator.sendBeacon(endpoint, b);
-    } else {
-        fetch(endpoint, { 
-            method: 'POST', 
-            body: JSON.stringify(payload), 
-            keepalive: true 
-        }).catch(function(){});
-    }
+  // --- Core Functions ---
+
+  // Collect Visit Data
+  function collect() {
+      var payload = {
+          url: LOC.href,
+          referrer: DOC.referrer,
+          sessionId: getSessionId(),
+          width: WIN.screen.width,
+          language: NAV.language || NAV.userLanguage
+      };
+      
+      var body = JSON.stringify(payload);
+      var sent = false;
+
+      // Prefer sendBeacon for reliability during navigation
+      if (NAV.sendBeacon) {
+          try {
+            var blob = new Blob([body], { type: 'text/plain' });
+            sent = NAV.sendBeacon(endpoint, blob);
+          } catch(e) {}
+      }
+
+      // Fallback to fetch with keepalive
+      if (!sent) {
+          try {
+            fetch(endpoint, { method: 'POST', body: body, keepalive: true }).catch(function(){});
+          } catch(e) {}
+      }
   }
 
-  function f() {
-    var ids = ['mh_today_pv', 'mh_today_uv', 'mh_site_pv', 'mh_site_uv', 'mh_page_pv', 'mh_page_uv'];
-    var els = {};
-    var has = false;
-    for (var i = 0; i < ids.length; i++) {
-        var el = d.getElementById(ids[i]);
-        if (el) { els[ids[i]] = el; has = true; }
-    }
-    
-    if (!has) return;
-    
-    var u = endpoint.replace('/lib/pixel.gif', '/api/status')
-             .replace('/lib/ping', '/api/status')
-             .replace('/lib/pixel', '/api/status')
-             .replace('/api/event', '/api/status')
-             .replace('/api/collect', '/api/status');
-             
-    if (u.indexOf('/api/status') === -1) {
-        // If endpoint was custom and didn't match replacements, try to guess or use origin
-         if (u.indexOf('http') === 0) {
-            var urlObj = new URL(u);
-            u = urlObj.origin + '/api/status';
-         } else {
-            u = '/api/status';
-         }
-    }
+  // Fetch and Display Public Stats
+  function fetchStats() {
+      var targets = [];
 
-    var q = '?url=' + encodeURIComponent(w.location.href) + '&domain=' + encodeURIComponent(w.location.hostname);
-    
-    fetch(u + q).then(function(r) { return r.json(); }).then(function(data) {
-        if (els['mh_today_pv']) els['mh_today_pv'].textContent = data.today.pv;
-        if (els['mh_today_uv']) els['mh_today_uv'].textContent = data.today.uv;
-        if (els['mh_site_pv']) els['mh_site_pv'].textContent = data.total.pv;
-        if (els['mh_site_uv']) els['mh_site_uv'].textContent = data.total.uv;
-        if (els['mh_page_pv']) els['mh_page_pv'].textContent = data.page.pv;
-        if (els['mh_page_uv']) els['mh_page_uv'].textContent = data.page.uv;
-    }).catch(function(err) { console.error(err); });
+      // 1. Data Attributes (Recommended)
+      var elements = DOC.querySelectorAll('[data-mh-stat]');
+      for (var i = 0; i < elements.length; i++) {
+          targets.push({ el: elements[i], type: elements[i].getAttribute('data-mh-stat') });
+      }
+
+      // 2. IDs (Legacy Support for mh_*)
+      var idMap = {
+          'mh_page_pv': 'page-pv',
+          'mh_page_uv': 'page-uv',
+          'mh_page_today_pv': 'page-today-pv',
+          'mh_page_today_uv': 'page-today-uv',
+          'mh_site_pv': 'site-pv',
+          'mh_site_uv': 'site-uv',
+          'mh_site_today_pv': 'site-today-pv',
+          'mh_site_today_uv': 'site-today-uv',
+          'mh_today_pv': 'site-today-pv',
+          'mh_today_uv': 'site-today-uv'
+      };
+      for (var id in idMap) {
+          var el = DOC.getElementById(id);
+          if (el) targets.push({ el: el, type: idMap[id] });
+      }
+
+      if (targets.length === 0) return;
+
+      // Convert endpoint /api/collect -> /api/counts
+      var statsEndpoint = endpoint.replace('/collect', '/counts') + '?url=' + encodeURIComponent(LOC.href);
+      
+      try {
+          fetch(statsEndpoint)
+              .then(function(res) { return res.json(); })
+              .then(function(data) {
+                  if (!data || data.error) return;
+                  
+                  for (var i = 0; i < targets.length; i++) {
+                      var item = targets[i];
+                      var type = item.type;
+                      var value = null;
+                      
+                      // Normalize type (handle 'pv' as 'page-pv' for backward compat if needed, though usually explicit)
+                      if (type === 'pv') type = 'page-pv';
+                      if (type === 'uv') type = 'page-uv';
+
+                      if (data.page && type.indexOf('page-') === 0) {
+                          var key = type.replace('page-', ''); // pv, uv, today-pv, today-uv
+                          if (key === 'today-pv') value = data.page.todayPv;
+                          else if (key === 'today-uv') value = data.page.todayUv;
+                          else value = data.page[key];
+                      } else if (data.site && type.indexOf('site-') === 0) {
+                          var key = type.replace('site-', ''); // pv, uv, today-pv, today-uv
+                          if (key === 'today-pv') value = data.site.todayPv;
+                          else if (key === 'today-uv') value = data.site.todayUv;
+                          else value = data.site[key];
+                      }
+                      
+                      if (value !== null && value !== undefined) {
+                          item.el.innerText = value;
+                          if (item.el.id && item.el.id.indexOf('mh_') === 0) {
+                              item.el.style.display = 'inline';
+                          }
+                      }
+                  }
+              })
+              .catch(function(e) {});
+      } catch(e) {}
   }
+
+
+  // --- Initialization ---
   
-  // Trigger immediately
-  c();
-  f();
-  
-  // Handle SPA (Single Page Application) navigation
-  var h = history;
-  var ps = h.pushState;
-  h.pushState = function() {
-      ps.apply(this, arguments);
-      c();
-      f();
-  };
-  w.addEventListener('popstate', function() {
-      c();
-      f();
-  });
+  try {
+      // 1. Collect immediately (PV)
+      collect();
+
+      // 2. Stats - wait for DOM to ensure elements are present
+      var retryCount = 0;
+      function tryFetchStats() {
+          fetchStats();
+          if (retryCount++ < 3) {
+              setTimeout(tryFetchStats, 1000 * retryCount);
+          }
+      }
+
+      if (DOC.readyState === 'loading') {
+          DOC.addEventListener('DOMContentLoaded', tryFetchStats);
+      } else {
+          tryFetchStats();
+      }
+
+      // 3. SPA Support (History API)
+      var history = WIN.history;
+      if (history && history.pushState) {
+          var originalPush = history.pushState;
+          history.pushState = function() {
+              var ret = originalPush.apply(this, arguments);
+              collect();
+              fetchStats();
+              return ret;
+          };
+          WIN.addEventListener('popstate', function() {
+              collect();
+              fetchStats();
+          });
+      }
+  } catch(e) {
+      console.warn('MH Analytics init failed', e);
+  }
+
 })();
 `;
