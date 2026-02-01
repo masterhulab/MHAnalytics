@@ -64,7 +64,7 @@ export const getDashboardJs = (appTitle: string, startYear: number, footerText: 
                 welcomeDesc: 'No data available yet. Add tracking code to start.',
                 copyScript: 'Copy Script',
                 scriptCopied: 'Copied!',
-                configNeeded: 'Configuration Needed',
+                configNeeded: 'Security Alert',
                 configNeededDesc: 'API Key is not configured. Your dashboard is currently <strong>publicly accessible</strong>.',
                 dismiss: 'Dismiss',
                 '24h': 'Last 24h',
@@ -104,7 +104,7 @@ export const getDashboardJs = (appTitle: string, startYear: number, footerText: 
                 welcomeDesc: '暂无数据。请将统计代码添加到您的网站以开始使用。',
                 copyScript: '复制统计代码',
                 scriptCopied: '已复制!',
-                configNeeded: '配置建议',
+                configNeeded: '安全提醒',
                 configNeededDesc: '未配置 API Key，您的仪表盘当前 <strong>对外公开</strong>。',
                 dismiss: '忽略',
                 '24h': '最近 24 小时',
@@ -156,9 +156,33 @@ export const getDashboardJs = (appTitle: string, startYear: number, footerText: 
             setupEventListeners();
             
             // Toast Check
-            if (safeLocalStorage.getItem('toast_dismissed') === 'true') {
-                const toast = document.getElementById('securityToast');
-                if (toast) toast.remove();
+            const toast = document.getElementById('securityToast');
+            const minimizeBtn = document.getElementById('minimizeToastBtn');
+            
+            if (toast) {
+                toast.classList.remove('hidden');
+                
+                // Init state
+                if (safeLocalStorage.getItem('toast_minimized') === 'true') {
+                    toast.classList.add('minimized');
+                }
+
+                // Minimize
+                if (minimizeBtn) {
+                    minimizeBtn.onclick = (e) => {
+                        e.stopPropagation();
+                        toast.classList.add('minimized');
+                        safeLocalStorage.setItem('toast_minimized', 'true');
+                    };
+                }
+
+                // Expand
+                toast.onclick = (e) => {
+                    if (toast.classList.contains('minimized')) {
+                        toast.classList.remove('minimized');
+                        safeLocalStorage.setItem('toast_minimized', 'false');
+                    }
+                };
             }
 
             // Initial Load
@@ -482,9 +506,9 @@ export const getDashboardJs = (appTitle: string, startYear: number, footerText: 
                     if (el.children.length > 0 && el.tagName === 'BUTTON') {
                         // Very specific for this dashboard buttons
                          const span = el.querySelector('span');
-                         if(span) span.textContent = translations[state.lang][key];
+                         if(span) span.innerHTML = translations[state.lang][key];
                     } else {
-                        el.textContent = translations[state.lang][key];
+                        el.innerHTML = translations[state.lang][key];
                     }
                 }
             });
@@ -625,7 +649,7 @@ export const getDashboardJs = (appTitle: string, startYear: number, footerText: 
             const copyBtn = document.getElementById('copyScriptBtn');
             if(copyBtn) {
                 copyBtn.addEventListener('click', () => {
-                     const code = '<script defer src="https://' + window.location.host + '/script.js"><\\/script>';
+                     const code = '<script defer src="https://' + window.location.host + '/tracker.js" data-endpoint="https://' + window.location.host + '/api/event"><\\/script>';
                      navigator.clipboard.writeText(code);
                      copyBtn.textContent = translations[state.lang].scriptCopied;
                      setTimeout(() => copyBtn.textContent = translations[state.lang].copyScript, 2000);

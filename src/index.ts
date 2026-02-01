@@ -4,7 +4,7 @@ import { trackerScript } from './tracker';
 import { getDashboardHtml } from './dashboard';
 import { Bindings, CollectPayload } from './types';
 import { AnalyticsService } from './analytics';
-import { isBot, checkOrigin, parseCommaSeparated, escapeHtml } from './utils';
+import { isBot, checkOrigin, parseCommaSeparated, escapeHtml, isValidUrl, sanitizeUrl } from './utils';
 
 const FAVICON_SVG = '<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 100 100"><text y=".9em" font-size="90">📊</text></svg>';
 
@@ -30,7 +30,7 @@ app.onError((err, c) => {
 
 const validateApiKey = (c: Context, required: boolean = true): boolean => {
     if (!c.env.API_KEY) return !required;
-    
+
     const apiKey = c.req.query('key') || c.req.header('Authorization')?.replace('Bearer ', '');
     return apiKey === c.env.API_KEY;
 };
@@ -66,7 +66,7 @@ const cache = async (c: Context, next: Next) => {
 app.get('/', cache, (c) => {
     const siteName = escapeHtml(c.env.SITE_NAME || 'MHAnalytics');
     const authorName = escapeHtml(c.env.AUTHOR_NAME || 'masterhulab');
-    
+
     const html = getDashboardHtml({
         appTitle: siteName,
         footerText: authorName,
@@ -82,14 +82,15 @@ app.get('/', cache, (c) => {
 const serveTracker = (c: Context) => {
     return c.body(trackerScript, 200, {
         'Content-Type': 'application/javascript',
-        'Cache-Control': 'public, max-age=86400, s-maxage=86400'
+        'Cache-Control': 'public, max-age=1800, s-maxage=1800' // 30 mins cache
     });
 };
 
-app.get('/script.js', serveTracker);
-app.get('/client.js', serveTracker);
 app.get('/tracker.js', serveTracker);
-app.get('/lib/core.js', serveTracker);
+app.get('/main.js', serveTracker);
+app.get('/mha.main.js', serveTracker);
+app.get('/lib/core.js', serveTracker); 
+app.get('/core.js', serveTracker); 
 
 // Favicon: Serves SVG favicon
 app.get('/favicon.ico', (c) => {
@@ -111,13 +112,19 @@ app.get('/setup', async (c) => {
 // Ingest Handler (GET)
 const handleCollectGet = async (c: Context) => {
     // 1. Extract Data
-    const url = c.req.query('u');
-    if (!url) return c.json({ error: 'Missing URL' }, 400);
+    const rawUrl = c.req.query('u') || c.req.query('url');
+    if (!rawUrl) return c.json({ error: 'Missing URL' }, 400);
+
+    // Validation & Sanitization
+    if (!isValidUrl(rawUrl)) return c.json({ error: 'Invalid URL' }, 400);
+    const url = sanitizeUrl(rawUrl);
 
     const userAgent = c.req.header('User-Agent') || 'Unknown';
     if (isBot(userAgent)) return c.json({ status: 'ignored', reason: 'bot' });
 
-    const referrer = c.req.query('r') || '';
+    const rawReferrer = c.req.query('r') || c.req.query('referrer') || '';
+    const referrer = rawReferrer ? sanitizeUrl(rawReferrer) : '';
+
     const ip = c.req.header('CF-Connecting-IP') || '0.0.0.0';
     const country = c.req.header('CF-IPCountry') || 'XX';
 
@@ -129,7 +136,7 @@ const handleCollectGet = async (c: Context) => {
     try {
         const u = new URL(url);
         domain = u.hostname;
-        
+
         // Check Ignore List (Path)
         const ignoredPaths = parseCommaSeparated(c.env.IGNORE_PATHS || '');
         if (ignoredPaths.some(p => u.pathname.startsWith(p))) return c.json({ status: 'ignored', reason: 'path' });
@@ -137,7 +144,9 @@ const handleCollectGet = async (c: Context) => {
         domain = 'unknown';
     }
 
-    const sessionId = c.req.query('s') || Math.random().toString(36).substring(2, 15);
+    const rawSessionId = c.req.query('s') || c.req.query('sessionId');
+    // Sanitize sessionId: alphanumeric only, max 64 chars
+    const sessionId = rawSessionId ? rawSessionId.replace(/[^a-zA-Z0-9-]/g, '').substring(0, 64) : Math.random().toString(36).substring(2, 15);
 
     // 2. Process
     const analytics = new AnalyticsService(c.env.DB);
@@ -160,6 +169,21 @@ const handleCollectGet = async (c: Context) => {
 
 // Ingest Handler (POST)
 const handleCollectPost = async (c: Context) => {
+    // Check Allowed Origins
+    const allowedOrigins = parseCommaSeparated(c.env.ALLOWED_ORIGINS);
+    if (allowedOrigins.length > 0) {
+        const origin = c.req.header('Origin');
+        const referer = c.req.header('Referer');
+        let requestOrigin = origin;
+        if (!requestOrigin && referer) {
+            try { requestOrigin = new URL(referer).origin; } catch {}
+        }
+
+        if (requestOrigin && !checkOrigin(requestOrigin, allowedOrigins)) {
+            return c.json({ status: 'ignored', reason: 'origin_mismatch' }, 403);
+        }
+    }
+
     let payload: CollectPayload;
     try {
         payload = await c.req.json();
@@ -173,8 +197,16 @@ const handleCollectPost = async (c: Context) => {
         }
     }
 
-    const { url, referrer, sessionId } = payload;
-    if (!url) return c.json({ error: 'Missing URL' }, 400);
+    const { url: rawUrl, referrer: rawReferrer, sessionId: rawSessionId } = payload;
+    if (!rawUrl) return c.json({ error: 'Missing URL' }, 400);
+
+    // Validation & Sanitization
+    if (!isValidUrl(rawUrl)) return c.json({ error: 'Invalid URL' }, 400);
+    const url = sanitizeUrl(rawUrl);
+    const referrer = rawReferrer ? sanitizeUrl(rawReferrer) : '';
+
+    // Sanitize sessionId
+    const sessionId = rawSessionId ? rawSessionId.replace(/[^a-zA-Z0-9-]/g, '').substring(0, 64) : Math.random().toString(36).substring(2, 15);
 
     const userAgent = c.req.header('User-Agent') || 'Unknown';
     if (isBot(userAgent)) return c.json({ status: 'ignored', reason: 'bot' });
@@ -202,12 +234,12 @@ const handleCollectPost = async (c: Context) => {
     try {
         await analytics.recordVisit({
             url,
-            referrer: referrer || '',
+            referrer,
             user_agent: userAgent,
             ip,
             country,
             domain,
-            session_id: sessionId || Math.random().toString(36).substring(2, 15)
+            session_id: sessionId
         });
         return c.json({ status: 'ok' }, 201);
     } catch (e: any) {
@@ -216,13 +248,24 @@ const handleCollectPost = async (c: Context) => {
     }
 };
 
-// Ingest: Collects analytics data (GET - Simple Pixel)
-app.get('/api/collect', handleCollectGet);
-app.get('/api/event', handleCollectGet); // Alias for ad-blocker evasion
+// --- Ingest Routes (Data Collection) ---
+// Strategy: Provide both semantic names (standard) and generic names (stealth)
+// 1. Semantic: /api/collect (Standard)
+// 2. Stealth:  /api/event   (Generic, harder to block)
 
-// Ingest: Collects analytics data (POST - JSON/Beacon)
+// GET: Pixel/Image-based tracking (Fallback)
+app.get('/api/collect', handleCollectGet);
+app.get('/api/event', handleCollectGet);
+
+// POST: JSON/Beacon-based tracking (Primary)
 app.post('/api/collect', handleCollectPost);
-app.post('/api/event', handleCollectPost); // Alias for ad-blocker evasion
+app.post('/api/event', handleCollectPost);
+
+
+// --- Stats Routes (Data Consumption) ---
+// Strategy: Provide both semantic names and generic names
+// 1. Semantic: /api/counts (Standard)
+// 2. Stealth:  /api/info   (Generic, harder to block)
 
 // Stats: Returns aggregated data for dashboard
 app.get('/api/stats', async (c) => {
@@ -242,10 +285,13 @@ app.get('/api/stats', async (c) => {
     }
 });
 
-// Public Counts: Returns PV/UV for a specific page/site (Public API)
-app.get('/api/counts', async (c) => {
-    const url = c.req.query('url');
-    if (!url) return c.json({ error: 'Missing URL' }, 400);
+// Public Counts Handler
+const handleCounts = async (c: Context) => {
+    const rawUrl = c.req.query('url');
+    if (!rawUrl) return c.json({ error: 'Missing URL' }, 400);
+
+    if (!isValidUrl(rawUrl)) return c.json({ error: 'Invalid URL' }, 400);
+    const url = sanitizeUrl(rawUrl);
 
     let domain = '';
     try {
@@ -263,6 +309,11 @@ app.get('/api/counts', async (c) => {
         console.error('Counts Error:', e);
         return c.json({ error: 'Counts Failed' }, 500);
     }
-});
+};
+
+// Public Counts: Returns PV/UV for a specific page/site
+app.get('/api/counts', handleCounts);
+app.get('/api/info', handleCounts);
+
 
 export default app;

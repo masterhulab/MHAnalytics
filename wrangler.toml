@@ -1,5 +1,5 @@
 name = "mhanalytics"
-compatibility_date = "2026-01-28"
+compatibility_date = "2026-01-01"
 
 # D1 Database Binding
 # Replace 'database_id' with your actual D1 Database ID from Cloudflare Dashboard

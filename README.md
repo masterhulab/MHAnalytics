@@ -1,22 +1,34 @@
 # MHAnalytics
 
+<div align="center">
+
+![MHAnalytics](https://socialify.git.ci/masterhulab/mhanalytics/image?description=1&font=Inter&language=1&name=1&owner=1&pattern=Circuit%20Board&theme=Auto)
+
+[![License](https://img.shields.io/badge/license-MIT-blue.svg)](LICENSE)
+[![Cloudflare Pages](https://img.shields.io/badge/Cloudflare-Pages-orange.svg?logo=cloudflare)](https://pages.cloudflare.com)
+[![D1 Database](https://img.shields.io/badge/Cloudflare-D1-orange.svg?logo=cloudflare)](https://developers.cloudflare.com/d1/)
+[![Hono](https://img.shields.io/badge/Framework-Hono-E36002.svg?logo=hono)](https://hono.dev)
+[![TypeScript](https://img.shields.io/badge/TypeScript-5.0-blue.svg?logo=typescript)](https://www.typescriptlang.org/)
+
 [English](README_EN.md) | [中文](README.md)
 
-一个基于 **Cloudflare Pages Functions** 和 **D1 Database** 构建的轻量级、隐私友好的网站分析工具。
+</div>
+
+**MHAnalytics** 是一个基于 **Cloudflare Pages Functions** 和 **D1 Database** 构建的轻量级、隐私友好的网站分析工具。
 
 本项目旨在通过 GitHub 轻松部署，并完全通过 Cloudflare 仪表盘进行配置，最终用户**无需修改任何代码**。
 
 ## ✨ 特性
 
-- **🚀 无服务器 & 快速**：运行在 Cloudflare 全球网络 (Pages Functions) 上，延迟极低。
+- **🚀 无服务器 & 免费层友好**：运行在 Cloudflare 全球网络 (Pages Functions) 上，延迟极低，且完全适配免费层配额。
 - **🔒 隐私优先**：无 Cookie，不收集个人数据。使用每日会话哈希 (Session Hash) 统计唯一访客，无法跨天追踪用户。
+- **🛡️ 抗拦截设计**：内置智能路由 (`/api/event`) 和重试机制，有效应对广告拦截插件。
 - **📊 内置仪表盘**：直接从你的 Pages URL 查看实时统计数据，支持多种时间范围（24小时、7天、30天、3个月、6个月、1年、全部）。
 - **🎨 现代 UI & 交互**：精心设计的暗色/亮色模式，玻璃拟态效果，以及平滑的加载动画和空状态引导。
 - **🌍 国际化支持**：内置中英文一键切换，自动适配访客语言偏好。
 - **🚩 隐私友好图标**：集成 `flag-icons` 和 `bootstrap-icons`，本地渲染图标，不依赖第三方 CDN。
 - **⚙️ 零代码配置**：通过标准环境变量自定义一切（时区、允许的来源、忽略列表）。
 - **🛠️ 模块化架构**：使用 TypeScript、Hono 和模块化服务构建的清晰代码结构。
-- **🆓 免费层友好**：非常适合中小型站点，完全在 Cloudflare 免费层限制范围内。
 
 ## ⚙️ 环境变量配置
 
@@ -36,38 +48,36 @@
 
 ## 📦 客户端集成
 
-### 1. 基础统计 (PV/UV)
+### 1. 抗拦截模式 (推荐)
+
+此方式通过配置 `data-endpoint` 指向备用接口，可有效绕过部分广告拦截插件。
 
 在你的网站 HTML 的 `<head>` 或 `<body>` 中引入以下脚本：
+
+```html
+<script 
+  defer 
+  src="https://your-analytics-project.pages.dev/tracker.js" 
+  data-endpoint="https://your-analytics-project.pages.dev/api/event">
+</script>
+```
+
+- 将 `https://your-analytics-project.pages.dev` 替换为你实际部署的 Cloudflare Pages 域名。
+- 脚本会自动处理上报重试。
+
+### 2. 基础集成
+
+最简单的集成方式，直接引入脚本：
 
 ```html
 <script defer src="https://your-analytics-project.pages.dev/tracker.js"></script>
 ```
 
-- 将 `https://your-analytics-project.pages.dev` 替换为你实际部署的 Cloudflare Pages 域名。
-- 脚本加载后会自动上报一次访问 (PV/UV)。
+## 📊 统计展示 (自定义标签)
 
-### 方式 2：使用 ID（兼容旧版）
+如果你想在页面底部显示当前页面的访问量：
 
-如果您已有的页面使用了特定的 ID，脚本也会自动填充数据：
-
-```html
-<!-- 页面访问量 (Page PV) -->
-<span id="mh_page_pv">...</span>
-
-<!-- 页面访客数 (Page UV) -->
-<span id="mh_page_uv">...</span>
-
-<!-- 全站访问量 (Site PV) -->
-<span id="mh_site_pv">...</span>
-
-<!-- 全站访客数 (Site UV) -->
-<span id="mh_site_uv">...</span>
-```
-
-### 方式 3：自定义数据属性 (推荐)
-
-如果你想在页面底部显示当前页面的访问量（类似“不蒜子”）：
+### 方式 1：data 属性 (推荐)
 
 ```html
 <!-- 显示当前页面 PV -->
@@ -83,7 +93,23 @@
 <span data-mh-stat="site_uv">...</span>
 ```
 
-脚本会自动查找带有 `data-mh-stat` 属性的元素，并填入对应的数据。
+### 方式 2：ID 属性 (兼容模式)
+
+脚本也支持通过特定的 ID 来自动填充数据：
+
+```html
+<!-- 显示全站总 PV -->
+<span id="mh_site_pv">...</span>
+
+<!-- 显示全站总 UV -->
+<span id="mh_site_uv">...</span>
+
+<!-- 显示当前页面 PV -->
+<span id="mh_page_pv">...</span>
+
+<!-- 显示当前页面 UV -->
+<span id="mh_page_uv">...</span>
+```
 
 ## 🔌 API 文档
 
@@ -117,7 +143,7 @@
   - `domain`: (可选) 过滤特定域名
 - **返回**: 包含趋势图、来源、浏览器、系统、地理位置等详细统计数据。
 
-## 💻 本地开发
+## 🛠️ 本地开发
 
 本项目完全支持使用 Cloudflare Wrangler CLI 进行本地开发和测试。
 
@@ -169,6 +195,30 @@ npx wrangler d1 execute analytics-db --remote --file=./schema.sql
 ```
 或者在 Cloudflare D1 控制台手动执行 `schema.sql` 的内容。
 
+## 📂 项目结构
+
+```
+├── functions/
+│   └── [[path]].ts      # Cloudflare Pages Functions 入口 (Hono 适配器)
+├── scripts/             # 实用工具脚本
+│   ├── find_icons.js    # 扫描项目使用的图标
+│   ├── generate_seed.js # 生成测试数据
+│   └── update_icons.js  # 更新图标集
+├── src/                 # 核心源代码
+│   ├── analytics.ts     # 统计服务与数据库交互逻辑
+│   ├── dashboard.ts     # 仪表盘 HTML 渲染 (SSR)
+│   ├── dashboard-css.ts # 仪表盘样式 (CSS in JS)
+│   ├── dashboard-js.ts  # 仪表盘前端交互逻辑
+│   ├── icons.ts         # SVG 图标集合 (本地化，无外部依赖)
+│   ├── index.ts         # Hono 应用主入口与 API 路由定义
+│   ├── tracker.ts       # 客户端埋点脚本 (tracker.js)
+│   ├── types.ts         # TypeScript 类型定义
+│   └── utils.ts         # 通用工具函数
+├── schema.sql           # 数据库初始化结构
+├── wrangler.toml        # Cloudflare 配置文件
+└── package.json         # 项目依赖配置
+```
+
 ## 📄 开源协议
 
-MIT License
+MIT License © 2026 [masterhulab](https://github.com/masterhulab)

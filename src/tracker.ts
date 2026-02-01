@@ -2,58 +2,76 @@ export const trackerScript = `
 (function() {
   'use strict';
 
-  // --- Configuration & Utilities ---
-  var WIN = window;
-  var DOC = document;
-  var LOC = WIN.location;
-  var NAV = WIN.navigator;
-  var STORAGE_KEY = '_mh_uid';
-  var SESSION_DURATION = 30 * 60 * 1000; // 30 minutes
+  const WIN = window;
+  const DOC = document;
+  const LOC = WIN.location;
+  const NAV = WIN.navigator;
+  const STORAGE_KEY = '_mh_uid';
+  const SESSION_DURATION = 30 * 60 * 1000;
 
-  // 1. Privacy Check (Do Not Track)
-  // Respect user's privacy settings
-  if (NAV.doNotTrack === '1' || WIN.doNotTrack === '1') {
-      return;
-  }
+  // Privacy Check
+  if (NAV.doNotTrack === '1' || WIN.doNotTrack === '1') return;
 
-  // Safe LocalStorage Helper
-  // Prevents crashes if cookies are disabled or storage is full
-  var SafeStorage = {
+  const SafeStorage = {
       get: function(key) {
-          try { return localStorage.getItem(key); } catch(e) { return null; }
+          try {
+              return localStorage.getItem(key);
+          } catch(e) {
+              return null;
+          }
       },
       set: function(key, val) {
-          try { localStorage.setItem(key, val); } catch(e) {}
+          try {
+              localStorage.setItem(key, val);
+          } catch(e) {}
       }
   };
 
-  // Determine API Endpoint
-  // Supports data-endpoint attribute or auto-detection from script src
-  var currentScript = DOC.currentScript;
-  var endpoint = '/api/collect'; // Default fallback
-  
+  const currentScript = DOC.currentScript;
+  let endpoint = '/api/event';
+  let scriptSrc = '';
+
   if (currentScript) {
-      var attr = currentScript.getAttribute('data-endpoint');
-      if (attr) {
-          endpoint = attr;
-      } else if (currentScript.src) {
+      scriptSrc = currentScript.src;
+      const attr = currentScript.getAttribute('data-endpoint');
+      if (attr) endpoint = attr;
+  } else {
+      // 1. Try to find script by attribute (Explicit Config)
+      const configScript = DOC.querySelector('script[data-endpoint]');
+      if (configScript) {
+          endpoint = configScript.getAttribute('data-endpoint');
+          scriptSrc = configScript.src;
+      } else {
+          // 2. Fallback: Try to find script by filename heuristics or Stack Trace
+          // Note: Stack trace is reliable for external scripts even with async/defer
           try {
-              var url = new URL(currentScript.src);
-              endpoint = url.origin + '/api/collect';
-          } catch(e) {}
+              throw new Error();
+          } catch(e) {
+              // Use new RegExp to avoid template literal escaping issues
+              const regex = new RegExp('(https?:\\/\\/[^\\s)\\n]+)');
+              const match = e.stack && e.stack.match(regex);
+              if (match) scriptSrc = match[0];
+          }
       }
   }
 
-  // Generate or Retrieve Session ID
-  // Uses a rotating ID based on activity to group visits into sessions
+  // Auto-detect endpoint from script source if not manually configured
+  if (endpoint === '/api/event' && scriptSrc) {
+      const parts = scriptSrc.split('/');
+      // Ensure we have a valid URL structure (proto/empty/domain/...)
+      if (parts.length >= 3) {
+          endpoint = parts.slice(0, 3).join('/') + '/api/event';
+      }
+  }
+
   function getSessionId() {
-      var stored = SafeStorage.get(STORAGE_KEY);
-      var now = Date.now();
-      var id = '';
+      const stored = SafeStorage.get(STORAGE_KEY);
+      const now = Date.now();
+      let id = '';
 
       if (stored) {
           try {
-              var parsed = JSON.parse(stored);
+              const parsed = JSON.parse(stored);
               if (now - parsed.lastActive < SESSION_DURATION) {
                   id = parsed.id;
               }
@@ -63,54 +81,41 @@ export const trackerScript = `
       if (!id) {
           id = Math.random().toString(36).substring(2) + now.toString(36);
       }
-
       SafeStorage.set(STORAGE_KEY, JSON.stringify({ id: id, lastActive: now }));
       return id;
   }
 
-  // --- Core Functions ---
-
-  // Collect Visit Data
   function collect() {
-      var payload = {
+      const body = JSON.stringify({
           url: LOC.href,
           referrer: DOC.referrer,
           sessionId: getSessionId(),
           width: WIN.screen.width,
           language: NAV.language || NAV.userLanguage
-      };
-      
-      var body = JSON.stringify(payload);
-      var sent = false;
+      });
 
-      // Prefer sendBeacon for reliability during navigation
-      if (NAV.sendBeacon) {
-          try {
-            var blob = new Blob([body], { type: 'text/plain' });
-            sent = NAV.sendBeacon(endpoint, blob);
-          } catch(e) {}
-      }
-
-      // Fallback to fetch with keepalive
-      if (!sent) {
-          try {
-            fetch(endpoint, { method: 'POST', body: body, keepalive: true }).catch(function(){});
-          } catch(e) {}
+      if (WIN.fetch) {
+          fetch(endpoint, { method: 'POST', body: body, keepalive: true })
+              .then(function(res) { if (!res.ok) throw res; })
+              .catch(function() {
+                  const STR_COLLECT = '/c' + 'ollect';
+                  const fallback = endpoint.replace(/\\/event$/, STR_COLLECT);
+                  if (fallback === endpoint) return;
+                  fetch(fallback, { method: 'POST', body: body, keepalive: true }).catch(function(){});
+              });
+      } else if (NAV.sendBeacon) {
+          NAV.sendBeacon(endpoint, new Blob([body], { type: 'text/plain' }));
       }
   }
 
-  // Fetch and Display Public Stats
   function fetchStats() {
-      var targets = [];
-
-      // 1. Data Attributes (Recommended)
-      var elements = DOC.querySelectorAll('[data-mh-stat]');
-      for (var i = 0; i < elements.length; i++) {
+      const targets = [];
+      const elements = DOC.querySelectorAll('[data-mh-stat]');
+      for (let i = 0; i < elements.length; i++) {
           targets.push({ el: elements[i], type: elements[i].getAttribute('data-mh-stat') });
       }
 
-      // 2. IDs (Legacy Support for mh_*)
-      var idMap = {
+      const idMap = {
           'mh_page_pv': 'page-pv',
           'mh_page_uv': 'page-uv',
           'mh_page_today_pv': 'page-today-pv',
@@ -122,95 +127,73 @@ export const trackerScript = `
           'mh_today_pv': 'site-today-pv',
           'mh_today_uv': 'site-today-uv'
       };
-      for (var id in idMap) {
-          var el = DOC.getElementById(id);
-          if (el) targets.push({ el: el, type: idMap[id] });
+
+      for (const k in idMap) {
+          const el = DOC.getElementById(k);
+          if (el) targets.push({ el: el, type: idMap[k] });
       }
 
-      if (targets.length === 0) return;
+      if (!targets.length) return;
 
-      // Convert endpoint /api/collect -> /api/counts
-      var statsEndpoint = endpoint.replace('/collect', '/counts') + '?url=' + encodeURIComponent(LOC.href);
-      
-      try {
-          fetch(statsEndpoint)
-              .then(function(res) { return res.json(); })
-              .then(function(data) {
-                  if (!data || data.error) return;
-                  
-                  for (var i = 0; i < targets.length; i++) {
-                      var item = targets[i];
-                      var type = item.type;
-                      var value = null;
-                      
-                      // Normalize type (handle 'pv' as 'page-pv' for backward compat if needed, though usually explicit)
-                      if (type === 'pv') type = 'page-pv';
-                      if (type === 'uv') type = 'page-uv';
+      const statsUrl = endpoint.replace(new RegExp('/[^/]+$'), '/info');
+      const query = '?url=' + encodeURIComponent(LOC.href);
 
-                      if (data.page && type.indexOf('page-') === 0) {
-                          var key = type.replace('page-', ''); // pv, uv, today-pv, today-uv
-                          if (key === 'today-pv') value = data.page.todayPv;
-                          else if (key === 'today-uv') value = data.page.todayUv;
-                          else value = data.page[key];
-                      } else if (data.site && type.indexOf('site-') === 0) {
-                          var key = type.replace('site-', ''); // pv, uv, today-pv, today-uv
-                          if (key === 'today-pv') value = data.site.todayPv;
-                          else if (key === 'today-uv') value = data.site.todayUv;
-                          else value = data.site[key];
-                      }
-                      
-                      if (value !== null && value !== undefined) {
-                          item.el.innerText = value;
-                          if (item.el.id && item.el.id.indexOf('mh_') === 0) {
-                              item.el.style.display = 'inline';
-                          }
-                      }
-                  }
-              })
-              .catch(function(e) {});
-      } catch(e) {}
-  }
+      function updateUI(data) {
+          if (!data || data.error) return;
+          for (let i = 0; i < targets.length; i++) {
+              const t = targets[i];
+              let type = t.type;
+              let val = null;
+              
+              if (type === 'pv') type = 'page-pv';
+              if (type === 'uv') type = 'page-uv';
 
+              const group = type.indexOf('page-') === 0 ? 'page' : 'site';
+              let key = type.replace(group + '-', '');
+              if (key === 'today-pv') key = 'todayPv';
+              if (key === 'today-uv') key = 'todayUv';
 
-  // --- Initialization ---
-  
-  try {
-      // 1. Collect immediately (PV)
-      collect();
-
-      // 2. Stats - wait for DOM to ensure elements are present
-      var retryCount = 0;
-      function tryFetchStats() {
-          fetchStats();
-          if (retryCount++ < 3) {
-              setTimeout(tryFetchStats, 1000 * retryCount);
+              if (data[group]) val = data[group][key];
+              if (val != null) t.el.innerText = val;
           }
       }
 
-      if (DOC.readyState === 'loading') {
-          DOC.addEventListener('DOMContentLoaded', tryFetchStats);
-      } else {
-          tryFetchStats();
-      }
+      try {
+          fetch(statsUrl + query)
+              .then(function(r){ return r.json(); })
+              .then(updateUI)
+              .catch(function() {
+                  const STR_COUNTS = '/c' + 'ounts';
+                  const alt = statsUrl.replace('/info', STR_COUNTS);
+                  fetch(alt + query).then(function(r){ return r.json(); }).then(updateUI).catch(function(){});
+              });
+      } catch(e) {}
+  }
 
-      // 3. SPA Support (History API)
-      var history = WIN.history;
+  try {
+      collect();
+      let retry = 0;
+      function tryStats() {
+          fetchStats();
+          if (retry++ < 3) setTimeout(tryStats, 1000 * retry);
+      }
+      if (DOC.readyState === 'loading') DOC.addEventListener('DOMContentLoaded', tryStats);
+      else tryStats();
+
+      const history = WIN.history;
       if (history && history.pushState) {
-          var originalPush = history.pushState;
+          const push = history.pushState;
           history.pushState = function() {
-              var ret = originalPush.apply(this, arguments);
+              const ret = push.apply(this, arguments);
               collect();
-              fetchStats();
+              tryStats();
               return ret;
           };
           WIN.addEventListener('popstate', function() {
               collect();
-              fetchStats();
+              tryStats();
           });
       }
-  } catch(e) {
-      console.warn('MH Analytics init failed', e);
-  }
-
+  } catch(e) {}
 })();
 `;

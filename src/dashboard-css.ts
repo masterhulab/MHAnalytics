@@ -121,5 +121,34 @@ export const dashboardCss = `
         #theme-sun { display: none !important; }
         :root.dark #theme-moon { display: none !important; }
         :root.dark #theme-sun { display: block !important; }
+
+        /* Toast */
+        #securityToast { transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1); transform-origin: left center; }
+        
+        #securityToast.minimized {
+            width: auto;
+            padding: 0;
+            border-radius: 9999px;
+            cursor: pointer;
+            background: transparent;
+            border-color: transparent;
+            box-shadow: none;
+        }
+        
+        #securityToast.minimized:hover {
+            transform: scale(1.1);
+        }
+
+        #securityToast.minimized .flex-1 { 
+            display: none; 
+        }
+        
+        #securityToast.minimized .flex-shrink-0 {
+            margin: 0;
+            box-shadow: 0 4px 12px rgba(0,0,0,0.1);
+        }
+        .dark #securityToast.minimized .flex-shrink-0 {
+             box-shadow: 0 4px 12px rgba(0,0,0,0.3);
+        }
     </style>
 `;

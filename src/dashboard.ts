@@ -31,18 +31,23 @@ export const getDashboardHtml = (props: {
 
     ${!props.requireAuth ? `
     <!-- Security Warning Toast -->
-    <div id="securityToast" class="fixed bottom-6 left-6 right-6 md:left-auto md:right-6 md:w-full md:max-w-sm z-50 bg-white dark:bg-gray-800 rounded-2xl shadow-2xl border border-yellow-200 dark:border-yellow-900/50 p-4 flex items-start gap-4 fade-in-up">
+    <div id="securityToast" class="fixed top-24 left-4 md:left-6 z-40 w-auto max-w-sm bg-white/90 dark:bg-gray-800/90 backdrop-blur-md rounded-2xl shadow-xl border border-yellow-200 dark:border-yellow-900/50 p-4 flex items-start gap-3 transition-all hover:scale-[1.02] fade-in-up">
         <div class="flex-shrink-0 p-2 bg-yellow-100 dark:bg-yellow-900/30 rounded-full text-yellow-600 dark:text-yellow-500">
-            <svg class="w-6 h-6" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+            <svg class="w-5 h-5" fill="none" viewBox="0 0 24 24" stroke="currentColor">
                 <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 9v2m0 4h.01m-6.938 4h13.856c1.54 0 2.502-1.667 1.732-3L13.732 4c-.77-1.333-2.694-1.333-3.464 0L3.34 16c-.77 1.333.192 3 1.732 3z"/>
             </svg>
         </div>
-        <div class="flex-1 pt-1">
-            <h3 class="font-bold text-gray-900 dark:text-white mb-1" data-i18n="configNeeded">Configuration Needed</h3>
-            <p class="text-sm text-gray-500 dark:text-gray-400 mb-3" data-i18n="configNeededDesc">
+        <div class="flex-1 pt-0.5">
+            <div class="flex justify-between items-start mb-1">
+                <h3 class="font-bold text-gray-900 dark:text-white text-sm" data-i18n="configNeeded">Security Alert</h3>
+                <button id="minimizeToastBtn" class="text-gray-400 hover:text-gray-600 dark:hover:text-gray-200 transition-colors p-0.5 -mr-1 -mt-0.5 rounded-full hover:bg-gray-100 dark:hover:bg-gray-700" title="Minimize">
+                    <div class="transform rotate-180 scale-75">${Icons.ui.chevronRight}</div>
+                </button>
+            </div>
+            <p class="text-xs text-gray-500 dark:text-gray-400 mb-2 leading-relaxed" data-i18n="configNeededDesc">
                 API Key is not configured. Your dashboard is currently <strong>publicly accessible</strong>.
             </p>
-            <button onclick="localStorage.setItem('toast_dismissed', 'true'); document.getElementById('securityToast').remove()" class="text-xs font-bold text-indigo-500 hover:text-indigo-600 dark:hover:text-indigo-400 uppercase tracking-wide" data-i18n="dismiss">
+            <button onclick="document.getElementById('securityToast').remove()" class="text-xs font-bold text-indigo-500 hover:text-indigo-600 dark:hover:text-indigo-400 uppercase tracking-wide" data-i18n="dismiss">
                 Dismiss
             </button>
         </div>
@@ -102,7 +107,7 @@ export const getDashboardHtml = (props: {
                             <h1 class="text-xl font-black text-gray-900 dark:text-white leading-none" data-i18n="navTitle">${props.appTitle}</h1>
                         </div>
                     </div>
-                    
+
                     <div class="flex items-center gap-2">
                         <!-- Domain Filter -->
                         <div class="relative" id="domainFilterContainer">
@@ -156,7 +161,7 @@ export const getDashboardHtml = (props: {
 
         <!-- Main Content -->
         <main class="flex-1 max-w-7xl w-full mx-auto px-4 sm:px-6 lg:px-8 pt-28 pb-10 fade-in-up">
-            
+
             <!-- Global No Data -->
             <div id="globalNoData" class="hidden flex flex-col items-center justify-center py-20 text-center">
                 <div class="w-24 h-24 bg-indigo-100 dark:bg-indigo-900/30 rounded-full flex items-center justify-center mb-6 animate-float">
@@ -167,7 +172,7 @@ export const getDashboardHtml = (props: {
                 <div class="bg-gray-900 dark:bg-black rounded-xl p-4 max-w-2xl w-full shadow-2xl relative group">
                     <button id="copyScriptBtn" class="absolute top-4 right-4 bg-gray-800 hover:bg-gray-700 text-gray-300 px-3 py-1.5 rounded-lg text-xs font-bold transition-colors border border-gray-700" data-i18n="copyScript">Copy Script</button>
                     <code class="font-mono text-sm text-indigo-400 block text-left overflow-x-auto p-2">
-                        &lt;script defer src="https://<span id="scriptDomain">...</span>/script.js"&gt;&lt;/script&gt;
+                        &lt;script defer src="https://<span id="scriptDomain">...</span>/tracker.js" data-endpoint="https://.../api/event"&gt;&lt;/script&gt;
                     </code>
                 </div>
             </div>
@@ -338,7 +343,7 @@ export const getDashboardHtml = (props: {
                     </div>
                 </div>
             </div>
-            
+
         </main>
 
         <!-- Footer -->

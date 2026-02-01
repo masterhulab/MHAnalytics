@@ -1,22 +1,34 @@
 # MHAnalytics
 
+<div align="center">
+
+![MHAnalytics](https://socialify.git.ci/masterhulab/mhanalytics/image?description=1&font=Inter&language=1&name=1&owner=1&pattern=Circuit%20Board&theme=Auto)
+
+[![License](https://img.shields.io/badge/license-MIT-blue.svg)](LICENSE)
+[![Cloudflare Pages](https://img.shields.io/badge/Cloudflare-Pages-orange.svg?logo=cloudflare)](https://pages.cloudflare.com)
+[![D1 Database](https://img.shields.io/badge/Cloudflare-D1-orange.svg?logo=cloudflare)](https://developers.cloudflare.com/d1/)
+[![Hono](https://img.shields.io/badge/Framework-Hono-E36002.svg?logo=hono)](https://hono.dev)
+[![TypeScript](https://img.shields.io/badge/TypeScript-5.0-blue.svg?logo=typescript)](https://www.typescriptlang.org/)
+
 [English](README_EN.md) | [中文](README.md)
 
-A lightweight, privacy-friendly website analytics tool built on **Cloudflare Pages Functions** and **D1 Database**.
+</div>
+
+**MHAnalytics** is a lightweight, privacy-friendly website analytics tool built on **Cloudflare Pages Functions** and **D1 Database**.
 
 Designed to be deployed easily via GitHub and configured entirely through the Cloudflare Dashboard, requiring **zero code changes** for the end user.
 
 ## ✨ Features
 
-- **🚀 Serverless & Fast**: Runs on Cloudflare's global network (Pages Functions) with minimal latency.
+- **🚀 Serverless & Free Tier Friendly**: Runs on Cloudflare's global network (Pages Functions) with minimal latency, fitting perfectly within free tier limits.
 - **🔒 Privacy-First**: No cookies, no PII collected. Uses daily session hashing to count unique visitors without cross-day tracking.
+- **🛡️ Anti-Adblock**: Built-in smart routing (`/api/event`) and retry mechanisms to bypass common ad-blockers.
 - **📊 Built-in Dashboard**: View real-time stats directly from your Pages URL, supporting multiple time ranges (24h, 7d, 30d, 3m, 6m, 1y, All).
 - **🎨 Modern UI & UX**: Designed with dark/light modes, glassmorphism, smooth loading animations, and intuitive empty states.
 - **🌍 I18n Support**: Built-in English/Chinese switching, automatically adapting to visitor preferences.
 - **🚩 Privacy-Friendly Icons**: Integrated `flag-icons` and `bootstrap-icons` for locally rendered icons, without external CDN dependencies.
 - **⚙️ Zero-Code Config**: Customize everything (Timezone, Allowed Origins, Ignore Lists) via standard environment variables.
 - **🛠️ Modular Architecture**: Clean code structure using TypeScript, Hono, and modular services.
-- **🆓 Free Tier Friendly**: Fits perfectly within Cloudflare's free tier limits for small to medium sites.
 
 ## ⚙️ Environment Variables
 
@@ -36,36 +48,36 @@ Configure these in the Cloudflare Dashboard under **Settings** -> **Environment 
 
 ## 📦 Client Integration
 
-### 1. Basic Tracking (PV/UV)
+### 1. Anti-Adblock (Recommended)
+
+This method configures `data-endpoint` to a fallback route, helping bypass some ad blockers.
 
 Add the following script to the `<head>` or `<body>` of your website:
+
+```html
+<script 
+  defer 
+  src="https://your-analytics-project.pages.dev/tracker.js" 
+  data-endpoint="https://your-analytics-project.pages.dev/api/event">
+</script>
+```
+
+- Replace `https://your-analytics-project.pages.dev` with your actual Cloudflare Pages domain.
+- The script automatically handles retries.
+
+### 2. Basic Integration
+
+The simplest way to integrate:
 
 ```html
 <script defer src="https://your-analytics-project.pages.dev/tracker.js"></script>
 ```
 
-- Replace `https://your-analytics-project.pages.dev` with your actual Cloudflare Pages domain.
-- The script automatically reports a visit (PV/UV) when loaded.
+## 📊 Public Stats Display
 
-### Method 2: Using IDs (Legacy Support)
+If you want to display visit counts on your page:
 
-If you have existing pages using specific IDs, the script will automatically populate them:
-
-```html
-<!-- Page Views (PV) -->
-<span id="mh_page_pv">...</span>
-
-<!-- Page Visitors (UV) -->
-<span id="mh_page_uv">...</span>
-
-<!-- Site Views (PV) -->
-<span id="mh_site_pv">...</span>
-
-<!-- Site Visitors (UV) -->
-<span id="mh_site_uv">...</span>
-```
-
-### Method 3: Data Attributes (Recommended)
+### Method 1: Using Data Attributes (Recommended)
 
 ```html
 <!-- Display current page PV -->
@@ -74,14 +86,30 @@ If you have existing pages using specific IDs, the script will automatically pop
 <!-- Display current page UV -->
 <span data-mh-stat="uv">...</span>
 
-<!-- Display site-wide total PV -->
+<!-- Display site total PV -->
 <span data-mh-stat="site_pv">...</span>
 
-<!-- Display site-wide total UV -->
+<!-- Display site total UV -->
 <span data-mh-stat="site_uv">...</span>
 ```
 
-The script will automatically find elements with the `data-mh-stat` attribute and populate them with data.
+### Method 2: Using ID Attributes (Legacy Support)
+
+The script also supports filling data into elements with specific IDs:
+
+```html
+<!-- Display site total PV -->
+<span id="mh_site_pv">...</span>
+
+<!-- Display site total UV -->
+<span id="mh_site_uv">...</span>
+
+<!-- Display current page PV -->
+<span id="mh_page_pv">...</span>
+
+<!-- Display current page UV -->
+<span id="mh_page_uv">...</span>
+```
 
 ## 🔌 API Documentation
 
@@ -115,7 +143,7 @@ You can also use the API directly for custom integrations:
   - `domain`: (Optional) Filter by domain
 - **Returns**: Detailed stats including trends, sources, browsers, OS, geography, etc.
 
-## 💻 Local Development
+## 🛠️ Local Development
 
 This project supports local development using Cloudflare Wrangler CLI.
 
@@ -167,6 +195,30 @@ npx wrangler d1 execute analytics-db --remote --file=./schema.sql
 ```
 Or manually execute `schema.sql` content in the Cloudflare D1 console.
 
+## 📂 Project Structure
+
+```
+├── functions/
+│   └── [[path]].ts      # Cloudflare Pages Functions Entry (Hono Adapter)
+├── scripts/             # Utility Scripts
+│   ├── find_icons.js    # Scan used icons
+│   ├── generate_seed.js # Generate test data
+│   └── update_icons.js  # Update icon set
+├── src/                 # Source Code
+│   ├── analytics.ts     # Analytics Service & DB Logic
+│   ├── dashboard.ts     # Dashboard HTML Rendering (SSR)
+│   ├── dashboard-css.ts # Dashboard Styles (CSS in JS)
+│   ├── dashboard-js.ts  # Dashboard Client-side Logic
+│   ├── icons.ts         # SVG Icon Collection (Local, No CDN)
+│   ├── index.ts         # Hono App Entry & API Routes
+│   ├── tracker.ts       # Client-side Tracking Script (tracker.js)
+│   ├── types.ts         # TypeScript Definitions
+│   └── utils.ts         # Utility Functions
+├── schema.sql           # Database Schema
+├── wrangler.toml        # Cloudflare Configuration
+└── package.json         # Project Dependencies
+```
+
 ## 📄 License
 
-MIT License
+MIT License © 2026 [masterhulab](https://github.com/masterhulab)
