@@ -28,39 +28,21 @@ export const trackerScript = `
   };
 
   const currentScript = DOC.currentScript;
-  let endpoint = '/api/event';
-  let scriptSrc = '';
+  
+  // Auto-injected by server. If not replaced (e.g. dev), fallback to empty.
+  // Use var for function scope to allow reassignment.
+  var AUTO_API_DOMAIN = '{{AUTO_API_DOMAIN}}';
+  if (AUTO_API_DOMAIN.indexOf('{{') === 0) AUTO_API_DOMAIN = '';
+  
+  let endpoint = AUTO_API_DOMAIN + '/api/event';
 
   if (currentScript) {
-      scriptSrc = currentScript.src;
       const attr = currentScript.getAttribute('data-endpoint');
       if (attr) endpoint = attr;
   } else {
-      // 1. Try to find script by attribute (Explicit Config)
       const configScript = DOC.querySelector('script[data-endpoint]');
       if (configScript) {
           endpoint = configScript.getAttribute('data-endpoint');
-          scriptSrc = configScript.src;
-      } else {
-          // 2. Fallback: Try to find script by filename heuristics or Stack Trace
-          // Note: Stack trace is reliable for external scripts even with async/defer
-          try {
-              throw new Error();
-          } catch(e) {
-              // Use new RegExp to avoid template literal escaping issues
-              const regex = new RegExp('(https?:\\/\\/[^\\s)\\n]+)');
-              const match = e.stack && e.stack.match(regex);
-              if (match) scriptSrc = match[0];
-          }
-      }
-  }
-
-  // Auto-detect endpoint from script source if not manually configured
-  if (endpoint === '/api/event' && scriptSrc) {
-      const parts = scriptSrc.split('/');
-      // Ensure we have a valid URL structure (proto/empty/domain/...)
-      if (parts.length >= 3) {
-          endpoint = parts.slice(0, 3).join('/') + '/api/event';
       }
   }
 
@@ -108,7 +90,7 @@ export const trackerScript = `
       }
   }
 
-  function fetchStats() {
+  function fetchStats(callback) {
       const targets = [];
       const elements = DOC.querySelectorAll('[data-mh-stat]');
       for (let i = 0; i < elements.length; i++) {
@@ -156,6 +138,7 @@ export const trackerScript = `
               if (data[group]) val = data[group][key];
               if (val != null) t.el.innerText = val;
           }
+          if (callback) callback(true);
       }
 
       try {
@@ -165,7 +148,10 @@ export const trackerScript = `
               .catch(function() {
                   const STR_COUNTS = '/c' + 'ounts';
                   const alt = statsUrl.replace('/info', STR_COUNTS);
-                  fetch(alt + query).then(function(r){ return r.json(); }).then(updateUI).catch(function(){});
+                  fetch(alt + query)
+                      .then(function(r){ return r.json(); })
+                      .then(updateUI)
+                      .catch(function(){ if (callback) callback(false); });
               });
       } catch(e) {}
   }
@@ -174,8 +160,9 @@ export const trackerScript = `
       collect();
       let retry = 0;
       function tryStats() {
-          fetchStats();
-          if (retry++ < 3) setTimeout(tryStats, 1000 * retry);
+          fetchStats(function(success) {
+              if (!success && retry++ < 2) setTimeout(tryStats, 1000 * (retry + 1));
+          });
       }
       if (DOC.readyState === 'loading') DOC.addEventListener('DOMContentLoaded', tryStats);
       else tryStats();

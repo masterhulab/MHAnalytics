@@ -80,7 +80,10 @@ app.get('/', cache, (c) => {
 
 // Tracker Scripts: Serves client-side JS
 const serveTracker = (c: Context) => {
-    return c.body(trackerScript, 200, {
+    const origin = new URL(c.req.url).origin;
+    const script = trackerScript.replace('{{AUTO_API_DOMAIN}}', origin);
+
+    return c.body(script, 200, {
         'Content-Type': 'application/javascript',
         'Cache-Control': 'public, max-age=1800, s-maxage=1800' // 30 mins cache
     });
@@ -91,6 +94,9 @@ app.get('/main.js', serveTracker);
 app.get('/mha.main.js', serveTracker);
 app.get('/lib/core.js', serveTracker); 
 app.get('/core.js', serveTracker); 
+app.get('/core1.js', serveTracker); 
+app.get('/core2.js', serveTracker); 
+app.get('/core3.js', serveTracker); 
 
 // Favicon: Serves SVG favicon
 app.get('/favicon.ico', (c) => {
