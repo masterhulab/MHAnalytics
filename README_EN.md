@@ -22,7 +22,7 @@ Designed to be deployed easily via GitHub and configured entirely through the Cl
 
 - **🚀 Serverless & Free Tier Friendly**: Runs on Cloudflare's global network (Pages Functions) with minimal latency, fitting perfectly within free tier limits.
 - **🔒 Privacy-First**: No cookies, no PII collected. Uses daily session hashing to count unique visitors without cross-day tracking.
-- **🛡️ Anti-Adblock**: Built-in smart routing (`/api/event`) and retry mechanisms to bypass common ad-blockers.
+- **🛡️ Anti-Adblock**: Uses generic endpoint names (`/api/event`) by default to minimize blocking.
 - **📊 Built-in Dashboard**: View real-time stats directly from your Pages URL, supporting multiple time ranges (24h, 7d, 30d, 3m, 6m, 1y, All).
 - **🎨 Modern UI & UX**: Designed with dark/light modes, glassmorphism, smooth loading animations, and intuitive empty states.
 - **🌍 I18n Support**: Built-in English/Chinese switching, automatically adapting to visitor preferences.
@@ -34,43 +34,42 @@ Designed to be deployed easily via GitHub and configured entirely through the Cl
 
 Configure these in the Cloudflare Dashboard under **Settings** -> **Environment variables**. No code changes required.
 
-| Variable | Description | Example / Default |
-| :--- | :--- | :--- |
-| `API_KEY` | **(Recommended)** Secret key to protect your dashboard. If unset, dashboard is public. | `my-secret-password` |
-| `ALLOWED_ORIGINS` | List of domains allowed to report data (CORS). Supports `*` wildcard. | `https://example.com,https://*.blog.com` |
-| `TZ_OFFSET` | Timezone offset (in hours) for dashboard and stats. | `8` (Default, UTC+8) |
-| `IGNORE_IPS` | List of IPs to ignore (e.g., your own IP). | `127.0.0.1, 192.168.1.1` |
-| `IGNORE_PATHS` | List of path prefixes to ignore (e.g., admin panels). | `/admin, /preview` |
-| `SITE_NAME` | Site name displayed on the dashboard. | `My Awesome Blog` |
-| `AUTHOR_NAME` | Author name displayed in the footer. | `John Doe` |
+
+| Variable          | Description                                                                            | Example / Default                        |
+| :---------------- | :------------------------------------------------------------------------------------- | :--------------------------------------- |
+| `API_KEY`         | **(Recommended)** Secret key to protect your dashboard. If unset, dashboard is public. | `my-secret-password`                     |
+| `ALLOWED_ORIGINS` | List of domains allowed to report data (CORS). Supports`*` wildcard.                   | `https://example.com,https://*.blog.com` |
+| `TZ_OFFSET`       | Timezone offset (in hours) for dashboard and stats.                                    | `8` (Default, UTC+8)                     |
+| `IGNORE_IPS`      | List of IPs to ignore (e.g., your own IP).                                             | `127.0.0.1, 192.168.1.1`                 |
+| `IGNORE_PATHS`    | List of path prefixes to ignore (e.g., admin panels).                                  | `/admin, /preview`                       |
+| `SITE_NAME`       | Site name displayed on the dashboard.                                                  | `My Awesome Blog`                        |
+| `AUTHOR_NAME`     | Author name displayed in the footer.                                                   | `John Doe`                               |
 
 > **Note**: After changing environment variables, you must **redeploy** (or click "Retry deployment") for changes to take effect.
 
 ## 📦 Client Integration
 
-### 1. Anti-Adblock (Recommended)
-
-This method configures `data-endpoint` to a fallback route, helping bypass some ad blockers.
+### Quick Start
 
 Add the following script to the `<head>` or `<body>` of your website:
 
 ```html
-<script 
-  defer 
-  src="https://your-analytics-project.pages.dev/tracker.js" 
-  data-endpoint="https://your-analytics-project.pages.dev/api/event">
-</script>
+<script defer src="https://your-analytics-project.pages.dev/tracker.js"></script>
 ```
 
 - Replace `https://your-analytics-project.pages.dev` with your actual Cloudflare Pages domain.
-- The script automatically handles retries.
+- The script automatically reports to `/api/event` by default.
 
-### 2. Basic Integration
+### Custom Endpoint (Optional)
 
-The simplest way to integrate:
+If you need to customize the reporting endpoint (e.g., using a custom domain), add the `data-endpoint` attribute:
 
 ```html
-<script defer src="https://your-analytics-project.pages.dev/tracker.js"></script>
+<script
+  defer
+  src="https://your-analytics-project.pages.dev/tracker.js"
+  data-endpoint="https://your-custom-domain.com/api/event">
+</script>
 ```
 
 ## 📊 Public Stats Display
@@ -116,7 +115,8 @@ The script also supports filling data into elements with specific IDs:
 You can also use the API directly for custom integrations:
 
 ### 1. Collect Data
-- **Endpoint**: `POST /api/collect` (Recommended) or `GET /api/collect`
+
+- **Endpoint**: `POST /api/event` (Recommended) or `GET /api/event`
 - **Function**: Record a visit.
 - **Params (JSON)**:
   - `url`: Current page URL
@@ -124,7 +124,8 @@ You can also use the API directly for custom integrations:
   - `userAgent`: User Agent string
 
 ### 2. Get Counts
-- **Endpoint**: `GET /api/counts`
+
+- **Endpoint**: `GET /api/info`
 - **Params**:
   - `url`: (Required) The page URL to query
 - **Returns**:
@@ -136,6 +137,7 @@ You can also use the API directly for custom integrations:
   ```
 
 ### 3. Dashboard Stats
+
 - **Endpoint**: `GET /api/stats`
 - **Header**: `x-api-key: <your-api-key>` (If `API_KEY` is set)
 - **Params**:
@@ -148,11 +150,13 @@ You can also use the API directly for custom integrations:
 This project supports local development using Cloudflare Wrangler CLI.
 
 ### 1. Install Dependencies
+
 ```bash
 npm install
 ```
 
 ### 2. Generate Test Data (Optional)
+
 To preview the full dashboard functionality during development:
 
 ```bash
@@ -164,35 +168,43 @@ npx wrangler d1 execute analytics-db --local --file=./seed.sql
 ```
 
 ### 3. Start Server
+
 ```bash
 npm run dev
 ```
+
 Visit `http://localhost:8788` to see the analytics service running locally.
 
 ## 🚀 Deployment Guide
 
 ### 1. Preparation
+
 1. **Fork** this repository.
 2. Log in to [Cloudflare Dashboard](https://dash.cloudflare.com/).
 3. Go to **Workers & Pages** -> **Create Application** -> **Pages** -> **Connect to Git**.
 
 ### 2. Create Pages Project
+
 1. Select repository, click **Begin setup**.
 2. **Framework preset**: `None`.
 3. **Build output directory**: `public`.
 4. Click **Save and Deploy**.
 
 ### 3. Bind Database (D1)
+
 1. Create a new D1 database (e.g., `analytics-db`) in Cloudflare dashboard.
 2. Go to Pages Project -> **Settings** -> **Functions**.
 3. Add **D1 Database Binding**: Variable name `DB`, select your database.
 4. **Important**: Redeploy for changes to take effect.
 
 ### 4. Initialize Table
+
 Run locally (requires login):
+
 ```bash
 npx wrangler d1 execute analytics-db --remote --file=./schema.sql
 ```
+
 Or manually execute `schema.sql` content in the Cloudflare D1 console.
 
 ## 📂 Project Structure

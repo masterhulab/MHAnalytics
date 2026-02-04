@@ -1,4 +1,5 @@
 const fs = require('fs');
+const path = require('path');
 
 const iconsPath = path.join(__dirname, '../src/icons.ts');
 const foundIconsPath = path.join(__dirname, 'found_icons.json');

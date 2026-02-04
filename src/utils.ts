@@ -15,7 +15,9 @@ export const isBot = (userAgent: string): boolean => {
  * @returns An array of strings (e.g. ["a", "b", "c"]). Returns empty array if input is undefined.
  */
 export const parseCommaSeparated = (str?: string): string[] => {
-    if (!str) return [];
+    if (!str) {
+        return [];
+    }
     return str.split(',').map(s => s.trim()).filter(Boolean);
 };
 
@@ -28,9 +30,13 @@ export const parseCommaSeparated = (str?: string): string[] => {
  * @returns true if allowed, false otherwise.
  */
 export const checkOrigin = (origin: string, allowed: string[] | '*'): boolean => {
-    if (allowed === '*') return true;
+    if (allowed === '*') {
+        return true;
+    }
     return allowed.some(o => {
-        if (o === origin) return true;
+        if (o === origin) {
+            return true;
+        }
         if (o.startsWith('*.')) {
             const domain = o.slice(2);
             try {

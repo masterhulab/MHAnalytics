@@ -308,22 +308,40 @@ export class AnalyticsService {
   }
 
   private parseOS(ua: string): string {
-      if (/Win/i.test(ua)) return 'Windows';
+      if (/Win/i.test(ua)) {
+          return 'Windows';
+      }
       if (/Mac/i.test(ua)) {
-          if (/iPhone|iPad|iPod/i.test(ua)) return 'iOS';
+          if (/iPhone|iPad|iPod/i.test(ua)) {
+              return 'iOS';
+          }
           return 'macOS';
       }
-      if (/Android/i.test(ua)) return 'Android';
-      if (/Linux/i.test(ua)) return 'Linux';
+      if (/Android/i.test(ua)) {
+          return 'Android';
+      }
+      if (/Linux/i.test(ua)) {
+          return 'Linux';
+      }
       return 'Other';
   }
 
   private parseBrowser(ua: string): string {
-      if (/Edg/i.test(ua)) return 'Edge';
-      if (/Chrome/i.test(ua) && !/Edg/i.test(ua) && !/OPR/i.test(ua)) return 'Chrome';
-      if (/Firefox/i.test(ua)) return 'Firefox';
-      if (/Safari/i.test(ua) && !/Chrome/i.test(ua)) return 'Safari';
-      if (/OPR/i.test(ua)) return 'Opera';
+      if (/Edg/i.test(ua)) {
+          return 'Edge';
+      }
+      if (/Chrome/i.test(ua) && !/Edg/i.test(ua) && !/OPR/i.test(ua)) {
+          return 'Chrome';
+      }
+      if (/Firefox/i.test(ua)) {
+          return 'Firefox';
+      }
+      if (/Safari/i.test(ua) && !/Chrome/i.test(ua)) {
+          return 'Safari';
+      }
+      if (/OPR/i.test(ua)) {
+          return 'Opera';
+      }
       return 'Other';
   }
 }

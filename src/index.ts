@@ -29,7 +29,9 @@ app.onError((err, c) => {
 // --- Helpers ---
 
 const validateApiKey = (c: Context, required: boolean = true): boolean => {
-    if (!c.env.API_KEY) return !required;
+    if (!c.env.API_KEY) {
+        return !required;
+    }
 
     const apiKey = c.req.query('key') || c.req.header('Authorization')?.replace('Bearer ', '');
     return apiKey === c.env.API_KEY;
@@ -43,7 +45,9 @@ app.use('/*', async (c, next) => {
         origin: (origin) => {
             const allowed = c.env.ALLOWED_ORIGINS || '*';
             const allowedOrigins = parseCommaSeparated(allowed);
-            if (allowed === '*') return origin;
+            if (allowed === '*') {
+                return origin;
+            }
             return checkOrigin(origin, allowedOrigins) ? origin : null;
         },
         credentials: true,
@@ -53,7 +57,9 @@ app.use('/*', async (c, next) => {
 
 // Cache: Applies aggressive caching for GET requests
 const cache = async (c: Context, next: Next) => {
-    if (c.req.method !== 'GET') return next();
+    if (c.req.method !== 'GET') {
+        return next();
+    }
     await next();
     if (c.res.status === 200) {
         c.header('Cache-Control', 'public, max-age=60, s-maxage=60, stale-while-revalidate=300');
@@ -92,11 +98,6 @@ const serveTracker = (c: Context) => {
 app.get('/tracker.js', serveTracker);
 app.get('/main.js', serveTracker);
 app.get('/mha.main.js', serveTracker);
-app.get('/lib/core.js', serveTracker); 
-app.get('/core.js', serveTracker); 
-app.get('/core1.js', serveTracker); 
-app.get('/core2.js', serveTracker); 
-app.get('/core3.js', serveTracker); 
 
 // Favicon: Serves SVG favicon
 app.get('/favicon.ico', (c) => {
@@ -109,7 +110,9 @@ app.get('/favicon.ico', (c) => {
 
 // Setup: Initialize Database
 app.get('/setup', async (c) => {
-    if (!validateApiKey(c)) return c.json({ error: 'Unauthorized' }, 401);
+    if (!validateApiKey(c)) {
+        return c.json({ error: 'Unauthorized' }, 401);
+    }
     const analytics = new AnalyticsService(c.env.DB);
     await analytics.initialize();
     return c.json({ status: 'ok', message: 'Database initialized' });
@@ -119,14 +122,20 @@ app.get('/setup', async (c) => {
 const handleCollectGet = async (c: Context) => {
     // 1. Extract Data
     const rawUrl = c.req.query('u') || c.req.query('url');
-    if (!rawUrl) return c.json({ error: 'Missing URL' }, 400);
+    if (!rawUrl) {
+        return c.json({ error: 'Missing URL' }, 400);
+    }
 
     // Validation & Sanitization
-    if (!isValidUrl(rawUrl)) return c.json({ error: 'Invalid URL' }, 400);
+    if (!isValidUrl(rawUrl)) {
+        return c.json({ error: 'Invalid URL' }, 400);
+    }
     const url = sanitizeUrl(rawUrl);
 
     const userAgent = c.req.header('User-Agent') || 'Unknown';
-    if (isBot(userAgent)) return c.json({ status: 'ignored', reason: 'bot' });
+    if (isBot(userAgent)) {
+        return c.json({ status: 'ignored', reason: 'bot' });
+    }
 
     const rawReferrer = c.req.query('r') || c.req.query('referrer') || '';
     const referrer = rawReferrer ? sanitizeUrl(rawReferrer) : '';
@@ -136,7 +145,9 @@ const handleCollectGet = async (c: Context) => {
 
     // Check Ignore List (IP)
     const ignoredIps = parseCommaSeparated(c.env.IGNORE_IPS || '');
-    if (ignoredIps.includes(ip)) return c.json({ status: 'ignored', reason: 'ip' });
+    if (ignoredIps.includes(ip)) {
+        return c.json({ status: 'ignored', reason: 'ip' });
+    }
 
     let domain = '';
     try {
@@ -145,14 +156,18 @@ const handleCollectGet = async (c: Context) => {
 
         // Check Ignore List (Path)
         const ignoredPaths = parseCommaSeparated(c.env.IGNORE_PATHS || '');
-        if (ignoredPaths.some(p => u.pathname.startsWith(p))) return c.json({ status: 'ignored', reason: 'path' });
+        if (ignoredPaths.some(p => u.pathname.startsWith(p))) {
+            return c.json({ status: 'ignored', reason: 'path' });
+        }
     } catch {
         domain = 'unknown';
     }
 
     const rawSessionId = c.req.query('s') || c.req.query('sessionId');
     // Sanitize sessionId: alphanumeric only, max 64 chars
-    const sessionId = rawSessionId ? rawSessionId.replace(/[^a-zA-Z0-9-]/g, '').substring(0, 64) : Math.random().toString(36).substring(2, 15);
+    const sessionId = rawSessionId 
+        ? rawSessionId.replace(/[^a-zA-Z0-9-]/g, '').substring(0, 64) 
+        : Math.random().toString(36).substring(2, 15);
 
     // 2. Process
     const analytics = new AnalyticsService(c.env.DB);
@@ -182,7 +197,9 @@ const handleCollectPost = async (c: Context) => {
         const referer = c.req.header('Referer');
         let requestOrigin = origin;
         if (!requestOrigin && referer) {
-            try { requestOrigin = new URL(referer).origin; } catch {}
+            try { 
+                requestOrigin = new URL(referer).origin; 
+            } catch {}
         }
 
         if (requestOrigin && !checkOrigin(requestOrigin, allowedOrigins)) {
@@ -204,25 +221,35 @@ const handleCollectPost = async (c: Context) => {
     }
 
     const { url: rawUrl, referrer: rawReferrer, sessionId: rawSessionId } = payload;
-    if (!rawUrl) return c.json({ error: 'Missing URL' }, 400);
+    if (!rawUrl) {
+        return c.json({ error: 'Missing URL' }, 400);
+    }
 
     // Validation & Sanitization
-    if (!isValidUrl(rawUrl)) return c.json({ error: 'Invalid URL' }, 400);
+    if (!isValidUrl(rawUrl)) {
+        return c.json({ error: 'Invalid URL' }, 400);
+    }
     const url = sanitizeUrl(rawUrl);
     const referrer = rawReferrer ? sanitizeUrl(rawReferrer) : '';
 
     // Sanitize sessionId
-    const sessionId = rawSessionId ? rawSessionId.replace(/[^a-zA-Z0-9-]/g, '').substring(0, 64) : Math.random().toString(36).substring(2, 15);
+    const sessionId = rawSessionId 
+        ? rawSessionId.replace(/[^a-zA-Z0-9-]/g, '').substring(0, 64) 
+        : Math.random().toString(36).substring(2, 15);
 
     const userAgent = c.req.header('User-Agent') || 'Unknown';
-    if (isBot(userAgent)) return c.json({ status: 'ignored', reason: 'bot' });
+    if (isBot(userAgent)) {
+        return c.json({ status: 'ignored', reason: 'bot' });
+    }
 
     const ip = c.req.header('CF-Connecting-IP') || '0.0.0.0';
     const country = c.req.header('CF-IPCountry') || 'XX';
 
     // Check Ignore List (IP)
     const ignoredIps = parseCommaSeparated(c.env.IGNORE_IPS || '');
-    if (ignoredIps.includes(ip)) return c.json({ status: 'ignored', reason: 'ip' });
+    if (ignoredIps.includes(ip)) {
+        return c.json({ status: 'ignored', reason: 'ip' });
+    }
 
     let domain = '';
     try {
@@ -231,7 +258,9 @@ const handleCollectPost = async (c: Context) => {
 
         // Check Ignore List (Path)
         const ignoredPaths = parseCommaSeparated(c.env.IGNORE_PATHS || '');
-        if (ignoredPaths.some(p => u.pathname.startsWith(p))) return c.json({ status: 'ignored', reason: 'path' });
+        if (ignoredPaths.some(p => u.pathname.startsWith(p))) {
+            return c.json({ status: 'ignored', reason: 'path' });
+        }
     } catch {
         domain = 'unknown';
     }
@@ -255,27 +284,17 @@ const handleCollectPost = async (c: Context) => {
 };
 
 // --- Ingest Routes (Data Collection) ---
-// Strategy: Provide both semantic names (standard) and generic names (stealth)
-// 1. Semantic: /api/collect (Standard)
-// 2. Stealth:  /api/event   (Generic, harder to block)
-
-// GET: Pixel/Image-based tracking (Fallback)
-app.get('/api/collect', handleCollectGet);
+// Endpoint: /api/event (Generic name to avoid ad blockers)
 app.get('/api/event', handleCollectGet);
-
-// POST: JSON/Beacon-based tracking (Primary)
-app.post('/api/collect', handleCollectPost);
 app.post('/api/event', handleCollectPost);
 
 
 // --- Stats Routes (Data Consumption) ---
-// Strategy: Provide both semantic names and generic names
-// 1. Semantic: /api/counts (Standard)
-// 2. Stealth:  /api/info   (Generic, harder to block)
-
-// Stats: Returns aggregated data for dashboard
+// Endpoint: /api/info (Generic name to avoid ad blockers)
 app.get('/api/stats', async (c) => {
-    if (!validateApiKey(c, false)) return c.json({ error: 'Unauthorized' }, 401);
+    if (!validateApiKey(c, false)) {
+        return c.json({ error: 'Unauthorized' }, 401);
+    }
 
     const range = c.req.query('range') || '24h';
     const domain = c.req.query('domain');
@@ -294,9 +313,13 @@ app.get('/api/stats', async (c) => {
 // Public Counts Handler
 const handleCounts = async (c: Context) => {
     const rawUrl = c.req.query('url');
-    if (!rawUrl) return c.json({ error: 'Missing URL' }, 400);
+    if (!rawUrl) {
+        return c.json({ error: 'Missing URL' }, 400);
+    }
 
-    if (!isValidUrl(rawUrl)) return c.json({ error: 'Invalid URL' }, 400);
+    if (!isValidUrl(rawUrl)) {
+        return c.json({ error: 'Invalid URL' }, 400);
+    }
     const url = sanitizeUrl(rawUrl);
 
     let domain = '';
@@ -318,7 +341,6 @@ const handleCounts = async (c: Context) => {
 };
 
 // Public Counts: Returns PV/UV for a specific page/site
-app.get('/api/counts', handleCounts);
 app.get('/api/info', handleCounts);
 
 
