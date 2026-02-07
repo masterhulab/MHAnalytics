@@ -28,7 +28,9 @@
 - **🌍 国际化支持**：内置中英文一键切换，自动适配访客语言偏好。
 - **🚩 隐私友好图标**：集成 `flag-icons` 和 `bootstrap-icons`，本地渲染图标，不依赖第三方 CDN。
 - **⚙️ 零代码配置**：通过标准环境变量自定义一切（时区、允许的来源、忽略列表）。
-- **🛠️ 模块化架构**：使用 TypeScript、Hono 和模块化服务构建的清晰代码结构。
+- **🛠️ 模块化架构**：采用 Router-Controller-Service 分层架构，使用 TypeScript 和 Hono 构建，代码清晰、易维护、易扩展。
+- **⚡ 高性能**：利用 Cloudflare Edge 边缘计算，数据库查询并行优化，静态资源强缓存策略。
+- **🔒 安全强化**：内置严格的内容安全策略 (CSP)、输入清洗 (Sanitization) 和 CORS 校验，确保数据安全。
 
 ## ⚙️ 环境变量配置
 
@@ -217,12 +219,13 @@ npx wrangler d1 execute analytics-db --remote --file=./schema.sql
 │   ├── generate_seed.js # 生成测试数据
 │   └── update_icons.js  # 更新图标集
 ├── src/                 # 核心源代码
-│   ├── analytics.ts     # 统计服务与数据库交互逻辑
-│   ├── dashboard.ts     # 仪表盘 HTML 渲染 (SSR)
-│   ├── dashboard-css.ts # 仪表盘样式 (CSS in JS)
-│   ├── dashboard-js.ts  # 仪表盘前端交互逻辑
+│   ├── analytics.ts     # [Service] 统计服务与数据库交互逻辑
+│   ├── controllers.ts   # [Controller] 业务逻辑控制器
+│   ├── dashboard.ts     # [View] 仪表盘 HTML 渲染 (SSR)
+│   ├── dashboard-css.ts # [View] 仪表盘样式 (CSS in JS)
+│   ├── dashboard-js.ts  # [View] 仪表盘前端交互逻辑
 │   ├── icons.ts         # SVG 图标集合 (本地化，无外部依赖)
-│   ├── index.ts         # Hono 应用主入口与 API 路由定义
+│   ├── index.ts         # [Router] Hono 应用主入口与路由分发
 │   ├── tracker.ts       # 客户端埋点脚本 (tracker.js)
 │   ├── types.ts         # TypeScript 类型定义
 │   └── utils.ts         # 通用工具函数

@@ -151,17 +151,17 @@ export const getDashboardJs = (appTitle: string, startYear: number, footerText: 
             if (storedTheme === 'dark' || (!storedTheme && window.matchMedia('(prefers-color-scheme: dark)').matches)) {
                 document.documentElement.classList.add('dark');
             }
-            
+
             // Events
             setupEventListeners();
-            
+
             // Toast Check
             const toast = document.getElementById('securityToast');
             const minimizeBtn = document.getElementById('minimizeToastBtn');
-            
+
             if (toast) {
                 toast.classList.remove('hidden');
-                
+
                 // Init state
                 if (safeLocalStorage.getItem('toast_minimized') === 'true') {
                     toast.classList.add('minimized');
@@ -192,7 +192,7 @@ export const getDashboardJs = (appTitle: string, startYear: number, footerText: 
         // --- Data Fetching ---
         async function loadData(showLoading = true) {
             if (showLoading) document.getElementById('loadingOverlay').classList.remove('hidden');
-            
+
             // Add spin animation to refresh icon
             const refreshIcon = document.querySelector('#refreshToggle svg');
             if (refreshIcon) refreshIcon.classList.add('animate-spin');
@@ -200,7 +200,7 @@ export const getDashboardJs = (appTitle: string, startYear: number, footerText: 
             const range = document.getElementById('timeRange').value;
             const domain = document.getElementById('domainFilter').value;
             const apiKey = safeLocalStorage.getItem('analytics_api_key');
-            
+
             const params = new URLSearchParams({ range, _t: Date.now() });
             if (domain) params.append('domain', domain);
 
@@ -216,7 +216,7 @@ export const getDashboardJs = (appTitle: string, startYear: number, footerText: 
                         return;
                     }
                 }
-                
+
                 const data = await res.json();
                 state.lastData = data;
                 renderDashboard(data);
@@ -236,14 +236,14 @@ export const getDashboardJs = (appTitle: string, startYear: number, footerText: 
             const isGlobalEmpty = data.summary.pv === 0 && document.getElementById('timeRange').value === 'all' && !document.getElementById('domainFilter').value;
             const content = document.getElementById('dashboardContent');
             const noData = document.getElementById('globalNoData');
-            
+
             if (isGlobalEmpty) {
                 content.classList.add('hidden');
                 noData.classList.remove('hidden');
                 document.getElementById('scriptDomain').textContent = window.location.host;
                 return;
             }
-            
+
             content.classList.remove('hidden');
             noData.classList.add('hidden');
 
@@ -274,9 +274,9 @@ export const getDashboardJs = (appTitle: string, startYear: number, footerText: 
             // Check if data is empty (checking both pv and uv)
             // const isEmpty = !data || data.length === 0 || data.every(d => d.pv === 0 && d.uv === 0);
             const isEmpty = !data || data.length === 0; // Render even if all zeros
-            
+
             document.getElementById('chartNoData').classList.toggle('hidden', !isEmpty);
-            
+
             if (state.chartInstance) state.chartInstance.destroy();
             if (isEmpty) return;
 
@@ -433,7 +433,7 @@ export const getDashboardJs = (appTitle: string, startYear: number, footerText: 
                        '<div class="py-3 px-3 text-sm text-gray-500 font-mono text-xs">' + (i + 1) + '</div>' +
                        '<div class="py-3 px-2 relative h-full flex items-center overflow-hidden">' +
                            '<div class="bar-bg" style="width: ' + pct + '%"></div>' +
-                           '<div class="relative z-10 flex items-center w-full min-w-0 gap-2">' + 
+                           '<div class="relative z-10 flex items-center w-full min-w-0 gap-2">' +
                                (icon ? '<span class="flex-shrink-0">' + icon + '</span>' : '') +
                                '<span class="truncate text-sm font-medium text-gray-900 dark:text-gray-100">' + displayKey + '</span>' +
                            '</div>' +
@@ -458,7 +458,7 @@ export const getDashboardJs = (appTitle: string, startYear: number, footerText: 
             if (!code || code.length !== 2) return Icons.ui.globe;
             return '<span class="fi fi-' + code.toLowerCase() + ' rounded shadow-sm"></span>';
         }
-        
+
         function getOSIcon(os) {
             os = (os || '').toLowerCase();
             if (os.includes('win')) return Icons.os.win;
@@ -483,11 +483,11 @@ export const getDashboardJs = (appTitle: string, startYear: number, footerText: 
             if (!el) return;
             const start = parseInt(el.getAttribute('data-value') || 0);
             if (start === end) return;
-            
+
             el.setAttribute('data-value', end);
             const duration = 1000;
             const startTime = performance.now();
-            
+
             requestAnimationFrame(function animate(time) {
                 let progress = (time - startTime) / duration;
                 if (progress > 1) progress = 1;
@@ -522,9 +522,9 @@ export const getDashboardJs = (appTitle: string, startYear: number, footerText: 
         function updateDomainList(domains) {
             const list = document.getElementById('domainListContent');
             const current = document.getElementById('domainFilter').value;
-            
+
             list.innerHTML = '';
-            
+
             // "All" option
             const allBtn = document.createElement('button');
             allBtn.className = 'w-full text-left px-3 py-2 rounded-lg text-sm font-medium flex justify-between items-center ' + (!current ? 'bg-indigo-50 dark:bg-indigo-900/30 text-indigo-600' : 'text-gray-700 dark:text-gray-200 hover:bg-indigo-50 dark:hover:bg-indigo-900/30');
@@ -539,7 +539,7 @@ export const getDashboardJs = (appTitle: string, startYear: number, footerText: 
                 btn.onclick = () => selectDomain(d);
                 list.appendChild(btn);
             });
-            
+
             document.getElementById('domainFilterLabel').textContent = current || translations[state.lang].allDomains;
         }
 
@@ -555,7 +555,7 @@ export const getDashboardJs = (appTitle: string, startYear: number, footerText: 
                 const btn = document.getElementById(btnId);
                 const menu = document.getElementById(menuId);
                 if(!btn || !menu) return;
-                
+
                 btn.addEventListener('click', (e) => {
                     e.stopPropagation();
                     const isHidden = menu.classList.contains('hidden');
@@ -569,10 +569,10 @@ export const getDashboardJs = (appTitle: string, startYear: number, footerText: 
                     }
                 });
             };
-            
+
             setupDropdown('domainFilterBtn', 'domainFilterMenu');
             setupDropdown('timeRangeBtn', 'timeRangeMenu');
-            
+
             // Close dropdowns on click outside
             document.addEventListener('click', () => {
                 document.querySelectorAll('[id$="Menu"]').forEach(menu => {
@@ -587,7 +587,7 @@ export const getDashboardJs = (appTitle: string, startYear: number, footerText: 
                 opt.addEventListener('click', () => {
                     const val = opt.getAttribute('data-value');
                     document.getElementById('timeRange').value = val;
-                    
+
                     // Update UI
                     document.querySelectorAll('.time-option').forEach(o => {
                         o.classList.remove('selected', 'bg-indigo-50', 'text-indigo-600', 'dark:bg-indigo-900/30');
@@ -595,15 +595,15 @@ export const getDashboardJs = (appTitle: string, startYear: number, footerText: 
                         o.querySelector('svg').classList.remove('opacity-100');
                         o.querySelector('svg').classList.add('opacity-0');
                     });
-                    
+
                     opt.classList.remove('text-gray-700', 'dark:text-gray-200');
                     opt.classList.add('selected', 'bg-indigo-50', 'text-indigo-600', 'dark:bg-indigo-900/30');
                     opt.querySelector('svg').classList.remove('opacity-0');
                     opt.querySelector('svg').classList.add('opacity-100');
-                    
+
                     document.getElementById('timeRangeLabel').setAttribute('data-i18n', val);
                     updateLangUI();
-                    
+
                     loadData(true);
                 });
             });
@@ -644,7 +644,7 @@ export const getDashboardJs = (appTitle: string, startYear: number, footerText: 
                     loadData(true);
                 }
             });
-            
+
             // Copy Script
             const copyBtn = document.getElementById('copyScriptBtn');
             if(copyBtn) {

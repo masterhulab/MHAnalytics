@@ -28,7 +28,9 @@ Designed to be deployed easily via GitHub and configured entirely through the Cl
 - **🌍 I18n Support**: Built-in English/Chinese switching, automatically adapting to visitor preferences.
 - **🚩 Privacy-Friendly Icons**: Integrated `flag-icons` and `bootstrap-icons` for locally rendered icons, without external CDN dependencies.
 - **⚙️ Zero-Code Config**: Customize everything (Timezone, Allowed Origins, Ignore Lists) via standard environment variables.
-- **🛠️ Modular Architecture**: Clean code structure using TypeScript, Hono, and modular services.
+- **🛠️ Modular Architecture**: Adopts Router-Controller-Service layered architecture, built with TypeScript and Hono for maintainability and extensibility.
+- **⚡ High Performance**: Optimized for Cloudflare Edge with parallel database queries and aggressive caching strategies.
+- **🔒 Security Hardened**: Built-in Content Security Policy (CSP), strict input sanitization, and CORS validation.
 
 ## ⚙️ Environment Variables
 
@@ -217,12 +219,13 @@ Or manually execute `schema.sql` content in the Cloudflare D1 console.
 │   ├── generate_seed.js # Generate test data
 │   └── update_icons.js  # Update icon set
 ├── src/                 # Source Code
-│   ├── analytics.ts     # Analytics Service & DB Logic
-│   ├── dashboard.ts     # Dashboard HTML Rendering (SSR)
-│   ├── dashboard-css.ts # Dashboard Styles (CSS in JS)
-│   ├── dashboard-js.ts  # Dashboard Client-side Logic
+│   ├── analytics.ts     # [Service] Analytics Service & DB Logic
+│   ├── controllers.ts   # [Controller] Request Handlers
+│   ├── dashboard.ts     # [View] Dashboard HTML Rendering (SSR)
+│   ├── dashboard-css.ts # [View] Dashboard Styles (CSS in JS)
+│   ├── dashboard-js.ts  # [View] Dashboard Client-side Logic
 │   ├── icons.ts         # SVG Icon Collection (Local, No CDN)
-│   ├── index.ts         # Hono App Entry & API Routes
+│   ├── index.ts         # [Router] App Entry & Route Dispatch
 │   ├── tracker.ts       # Client-side Tracking Script (tracker.js)
 │   ├── types.ts         # TypeScript Definitions
 │   └── utils.ts         # Utility Functions

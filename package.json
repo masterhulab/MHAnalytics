@@ -21,9 +21,11 @@
   "license": "MIT",
   "type": "commonjs",
   "dependencies": {
-    "@cloudflare/workers-types": "^4.20260123.0",
     "@iconify-json/logos": "^1.2.10",
-    "hono": "^4.11.5",
+    "hono": "^4.11.5"
+  },
+  "devDependencies": {
+    "@cloudflare/workers-types": "^4.20260123.0",
     "typescript": "^5.9.3",
     "wrangler": "^4.60.0"
   }

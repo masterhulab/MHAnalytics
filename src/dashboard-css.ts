@@ -1,16 +1,16 @@
 export const dashboardCss = `
     <style>
         body { font-family: 'Inter', sans-serif; -webkit-font-smoothing: antialiased; }
-        
+
         /* Mesh Background */
         .mesh-bg {
             background-color: #F2F2F7;
-            background-image: 
+            background-image:
                 radial-gradient(at 40% 20%, hsla(253,100%,90%,0.5) 0px, transparent 50%),
                 radial-gradient(at 80% 0%, hsla(189,100%,90%,0.5) 0px, transparent 50%),
                 radial-gradient(at 0% 50%, hsla(341,100%,90%,0.5) 0px, transparent 50%),
                 radial-gradient(at 80% 50%, hsla(250,100%,90%,0.5) 0px, transparent 50%),
-                radial-gradient(at 0% 100%, hsla(253,16%,7%,0) 0, transparent 50%), 
+                radial-gradient(at 0% 100%, hsla(253,16%,7%,0) 0, transparent 50%),
                 radial-gradient(at 50% 100%, hsla(225,39%,30%,0) 0, transparent 50%);
             position: relative;
         }
@@ -21,11 +21,11 @@ export const dashboardCss = `
         }
         .dark .mesh-bg {
             background-color: #050505;
-            background-image: 
+            background-image:
                 radial-gradient(at 40% 20%, rgba(88, 86, 214, 0.15) 0px, transparent 50%),
                 radial-gradient(at 80% 0%, rgba(52, 199, 89, 0.1) 0px, transparent 50%),
                 radial-gradient(at 0% 50%, rgba(255, 59, 48, 0.05) 0px, transparent 50%),
-                radial-gradient(at 0% 0%, rgba(88, 86, 214, 0.15) 0, transparent 50%), 
+                radial-gradient(at 0% 0%, rgba(88, 86, 214, 0.15) 0, transparent 50%),
                 radial-gradient(at 100% 100%, rgba(52, 199, 89, 0.05) 0, transparent 50%);
         }
 
@@ -96,14 +96,14 @@ export const dashboardCss = `
         .hidden { display: none !important; }
         .fade-in-up { animation: fadeInUp 0.8s cubic-bezier(0.16, 1, 0.3, 1) forwards; opacity: 0; transform: translateY(20px); }
         @keyframes fadeInUp { to { opacity: 1; transform: translateY(0); } }
-        
+
         .bar-bg {
             position: absolute; top: 0; bottom: 0; left: 0; z-index: 0;
             background: linear-gradient(90deg, rgba(88, 86, 214, 0.08), rgba(88, 86, 214, 0.18));
             border-radius: 0 8px 8px 0; transition: width 1.2s ease;
         }
         .dark .bar-bg { background: linear-gradient(90deg, rgba(94, 92, 230, 0.1), rgba(94, 92, 230, 0.25)); }
-        
+
         /* Table */
         tbody tr { transition: all 0.2s ease; position: relative; }
         tbody tr:hover { background-color: rgba(88, 86, 214, 0.03); transform: translateX(2px); }
@@ -124,7 +124,7 @@ export const dashboardCss = `
 
         /* Toast */
         #securityToast { transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1); transform-origin: left center; }
-        
+
         #securityToast.minimized {
             width: auto;
             padding: 0;
@@ -134,15 +134,15 @@ export const dashboardCss = `
             border-color: transparent;
             box-shadow: none;
         }
-        
+
         #securityToast.minimized:hover {
             transform: scale(1.1);
         }
 
-        #securityToast.minimized .flex-1 { 
-            display: none; 
+        #securityToast.minimized .flex-1 {
+            display: none;
         }
-        
+
         #securityToast.minimized .flex-shrink-0 {
             margin: 0;
             box-shadow: 0 4px 12px rgba(0,0,0,0.1);
